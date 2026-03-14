@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DrishtiAI — Vision Beyond Sight</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --mauve: #cfc3bc;
+      --mauve-d: #bfb0a8;
+      --mauve-l: #ddd4ce;
+      --ink: #111010;
+      --ink2: #2a2320;
+      --blue: #4f6ef7;
+      --magenta: #d832f5;
+      --orange: #f05a28;
+      --gold: #f5b800;
+      --green: #22c55e;
+      --red: #ef4444;
+      --white: #faf7f5;
+      --r: 12px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--mauve);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    #cur {
+      position: fixed;
+      width: 12px;
+      height: 12px;
+      background: var(--ink);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width .18s, height .18s;
+      mix-blend-mode: multiply;
+    }
+
+    #cur.big {
+      width: 44px;
+      height: 44px;
+      background: var(--blue);
+      opacity: .3;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='0.045'/%3E%3C/svg%3E");
+      opacity: .5;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.4rem 2.5rem;
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: -.02em;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+    }
+
+    .nav-links a {
+      font-size: .8rem;
+      font-weight: 500;
+      color: rgba(17, 16, 16, .5);
+      text-decoration: none;
+      padding: .4rem .9rem;
+      border-radius: 99px;
+      transition: all .2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--ink);
+      background: rgba(17, 16, 16, .08);
+    }
+
+    .nav-cam {
+      background: var(--ink);
+      color: var(--mauve-l);
+      font-size: .8rem;
+      font-weight: 600;
+      padding: .55rem 1.3rem;
+      border-radius: 99px;
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .2s;
+    }
+
+    .nav-cam:hover {
+      background: var(--ink2);
+      transform: translateY(-1px);
+    }
+
+    /* HERO */
+    #hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .blob-blue {
+      position: absolute;
+      top: 12%;
+      left: 24%;
+      width: clamp(220px, 34vw, 480px);
+      height: clamp(80px, 11vw, 160px);
+      background: var(--blue);
+      border-radius: 999px;
+      transform: rotate(-18deg);
+      z-index: 4;
+      box-shadow: 12px 24px 60px rgba(79, 110, 247, .35);
+      animation: floatBlue 7s ease-in-out infinite, slideDown .9s .05s cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    .blob-magenta {
+      position: absolute;
+      bottom: 16%;
+      right: 10%;
+      width: clamp(200px, 32vw, 440px);
+      height: clamp(70px, 10vw, 140px);
+      background: var(--magenta);
+      border-radius: 999px;
+      transform: rotate(12deg);
+      z-index: 4;
+      box-shadow: 12px 24px 60px rgba(216, 50, 245, .35);
+      animation: floatMagenta 8s 1s ease-in-out infinite, slideDown .9s .2s cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    .blob-gold {
+      position: absolute;
+      bottom: 23%;
+      right: 26%;
+      width: clamp(36px, 5vw, 72px);
+      height: clamp(36px, 5vw, 72px);
+      background: radial-gradient(circle at 35% 35%, #ffe44d, var(--gold) 60%, #c98800);
+      border-radius: 50%;
+      z-index: 5;
+      box-shadow: 4px 8px 24px rgba(245, 184, 0, .5);
+      animation: floatGold 6s .5s ease-in-out infinite, fadeIn .6s .4s ease both;
+    }
+
+    .blob-orange {
+      position: absolute;
+      top: 21%;
+      left: 33%;
+      width: 0;
+      height: 0;
+      border-left: clamp(18px, 2.8vw, 44px) solid transparent;
+      border-right: clamp(18px, 2.8vw, 44px) solid transparent;
+      border-bottom: clamp(30px, 4.8vw, 76px) solid var(--orange);
+      z-index: 3;
+      filter: drop-shadow(4px 6px 12px rgba(240, 90, 40, .4));
+      animation: floatOrange 5s 2s ease-in-out infinite, fadeIn .6s .3s ease both;
+    }
+
+    .hero-text-wrap {
+      position: relative;
+      z-index: 3;
+      text-align: center;
+      user-select: none;
+      padding: 0 1rem;
+    }
+
+    .hero-line1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(5rem, 14vw, 14rem);
+      line-height: .88;
+      letter-spacing: -.04em;
+      color: var(--ink);
+      display: block;
+      animation: slideUp .9s cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    .hero-line2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.2rem, 5.8vw, 5.8rem);
+      line-height: 1;
+      letter-spacing: -.03em;
+      color: var(--ink);
+      opacity: .45;
+      display: block;
+      margin-top: .3rem;
+      animation: slideUp .9s .12s cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    .hero-sub {
+      position: absolute;
+      bottom: 3.5rem;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      z-index: 6;
+      animation: fadeIn .8s .6s ease both;
+    }
+
+    .hero-desc {
+      font-size: clamp(.8rem, 1.1vw, 1rem);
+      color: rgba(17, 16, 16, .55);
+      font-weight: 400;
+      max-width: 380px;
+      line-height: 1.65;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+    }
+
+    .btn-dark {
+      background: var(--ink);
+      color: var(--mauve-l);
+      font-size: .85rem;
+      font-weight: 600;
+      padding: .75rem 1.8rem;
+      border-radius: 99px;
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .22s;
+      letter-spacing: .01em;
+    }
+
+    .btn-dark:hover {
+      background: var(--ink2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(17, 16, 16, .2);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      font-size: .85rem;
+      font-weight: 500;
+      padding: .75rem 1.6rem;
+      border-radius: 99px;
+      border: 1.5px solid rgba(17, 16, 16, .25);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .22s;
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--ink);
+      background: rgba(17, 16, 16, .06);
+    }
+
+    /* TICKER */
+    .ticker-wrap {
+      background: var(--ink);
+      overflow: hidden;
+      padding: .75rem 0;
+      position: relative;
+      z-index: 10;
+    }
+
+    .ticker {
+      display: flex;
+      animation: ticker 20s linear infinite;
+      width: max-content;
+    }
+
+    .ticker-item {
+      color: var(--mauve-l);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .78rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 0 2.5rem;
+      white-space: nowrap;
+      border-right: 1px solid rgba(207, 195, 188, .15);
+    }
+
+    .ticker-item span {
+      color: var(--blue);
+      margin-right: .5rem;
+    }
+
+    /* FEATURES */
+    .feat-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 4rem;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      font-size: .72rem;
+      font-weight: 500;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(17, 16, 16, .4);
+      margin-bottom: .8rem;
+    }
+
+    .sec-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.2rem, 4vw, 3.6rem);
+      letter-spacing: -.03em;
+      line-height: .95;
+      color: var(--ink);
+    }
+
+    .sec-title em {
+      font-style: normal;
+      color: var(--blue);
+    }
+
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5px;
+      border: 1.5px solid rgba(17, 16, 16, .1);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+
+    .feat-card {
+      background: var(--mauve);
+      padding: 2.5rem;
+      transition: background .25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feat-card:hover {
+      background: var(--mauve-d);
+    }
+
+    .fc-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 3rem;
+      color: rgba(17, 16, 16, .06);
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+
+    .fc-ico {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .fc-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: .6rem;
+    }
+
+    .fc-desc {
+      font-size: .82rem;
+      color: rgba(17, 16, 16, .55);
+      line-height: 1.7;
+    }
+
+    .feat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--blue), var(--magenta));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .4s;
+    }
+
+    .feat-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    /* DEMO */
+    .demo-eyebrow {
+      font-size: .72rem;
+      font-weight: 500;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(207, 195, 188, .4);
+      margin-bottom: .8rem;
+    }
+
+    .demo-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.2rem, 4vw, 3.6rem);
+      letter-spacing: -.03em;
+      line-height: .95;
+      color: var(--mauve-l);
+      margin-bottom: 1rem;
+    }
+
+    .demo-title em {
+      font-style: normal;
+      color: var(--blue);
+    }
+
+    .demo-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .sign-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .6rem;
+    }
+
+    .sign-btn {
+      background: rgba(207, 195, 188, .05);
+      border: 1px solid rgba(207, 195, 188, .1);
+      border-radius: 10px;
+      padding: 1rem .5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all .2s;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--mauve-l);
+    }
+
+    .sign-btn:hover {
+      border-color: var(--blue);
+      background: rgba(79, 110, 247, .1);
+      transform: translateY(-2px);
+    }
+
+    .sign-btn.active {
+      border-color: var(--blue);
+      background: rgba(79, 110, 247, .15);
+    }
+
+    .sico {
+      font-size: 1.4rem;
+      display: block;
+      margin-bottom: .3rem;
+    }
+
+    .slbl {
+      font-size: .58rem;
+      color: rgba(207, 195, 188, .5);
+      letter-spacing: .04em;
+    }
+
+    .voice-panel {
+      background: rgba(207, 195, 188, .06);
+      border: 1px solid rgba(207, 195, 188, .12);
+      border-radius: 16px;
+      padding: 1.8rem;
+      position: sticky;
+      top: 80px;
+    }
+
+    .vp-head {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid rgba(207, 195, 188, .08);
+    }
+
+    .vp-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(207, 195, 188, .25);
+      transition: all .3s;
+    }
+
+    .vp-dot.on {
+      background: var(--blue);
+      box-shadow: 0 0 10px var(--blue);
+      animation: blink .8s infinite;
+    }
+
+    .vp-status {
+      font-size: .68rem;
+      color: rgba(207, 195, 188, .35);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .vp-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.8rem;
+      letter-spacing: -.02em;
+      color: var(--mauve-l);
+      min-height: 2.3rem;
+      margin-bottom: .6rem;
+      transition: all .25s;
+    }
+
+    .vp-msg {
+      font-size: .8rem;
+      color: rgba(207, 195, 188, .45);
+      line-height: 1.65;
+      background: rgba(207, 195, 188, .04);
+      border-left: 2px solid var(--blue);
+      padding: .7rem .9rem;
+      border-radius: 0 6px 6px 0;
+      min-height: 2.5rem;
+      margin-bottom: 1.4rem;
+      transition: all .25s;
+    }
+
+    .vp-speak {
+      width: 100%;
+      padding: .85rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: var(--blue);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .88rem;
+      letter-spacing: .03em;
+      transition: all .2s;
+      box-shadow: 0 0 24px rgba(79, 110, 247, .35);
+    }
+
+    .vp-speak:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 40px rgba(79, 110, 247, .55);
+    }
+
+    .vp-speak:disabled {
+      opacity: .3;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .lang-row {
+      display: flex;
+      gap: .4rem;
+      margin-top: .9rem;
+    }
+
+    .lang-b {
+      padding: .28rem .8rem;
+      border-radius: 99px;
+      font-size: .66rem;
+      cursor: pointer;
+      border: 1px solid rgba(207, 195, 188, .12);
+      color: rgba(207, 195, 188, .4);
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .2s;
+    }
+
+    .lang-b.active,
+    .lang-b:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(79, 110, 247, .1);
+    }
+
+    .conf-section {
+      margin-top: 1.1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(207, 195, 188, .08);
+    }
+
+    .conf-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: .62rem;
+      color: rgba(207, 195, 188, .3);
+      margin-bottom: .4rem;
+    }
+
+    .conf-track {
+      height: 3px;
+      background: rgba(207, 195, 188, .08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .conf-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--blue), var(--magenta));
+      border-radius: 99px;
+      transition: width .5s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    /* ARCH */
+    .arch-row {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 3.5rem;
+      border: 1.5px solid rgba(17, 16, 16, .1);
+      border-radius: var(--r);
+      overflow: hidden;
+      overflow-x: auto;
+    }
+
+    .arch-step {
+      flex: 1;
+      min-width: 140px;
+      background: var(--mauve-l);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      border-right: 1.5px solid rgba(17, 16, 16, .08);
+      transition: background .25s;
+    }
+
+    .arch-step:last-child {
+      border-right: none;
+    }
+
+    .arch-step:hover {
+      background: var(--mauve-d);
+    }
+
+    .as-num {
+      font-family: 'Syne', sans-serif;
+      font-size: .62rem;
+      font-weight: 700;
+      color: rgba(17, 16, 16, .3);
+      letter-spacing: .12em;
+      margin-bottom: .9rem;
+    }
+
+    .as-ico {
+      font-size: 2rem;
+      margin-bottom: .7rem;
+    }
+
+    .as-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .88rem;
+      color: var(--ink);
+      margin-bottom: .25rem;
+    }
+
+    .as-sub {
+      font-size: .66rem;
+      color: rgba(17, 16, 16, .45);
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .spec-card {
+      background: var(--mauve-l);
+      border: 1.5px solid rgba(17, 16, 16, .08);
+      border-radius: var(--r);
+      padding: 1.4rem;
+      transition: all .25s;
+    }
+
+    .spec-card:hover {
+      border-color: rgba(17, 16, 16, .18);
+      background: var(--mauve-d);
+    }
+
+    .spec-tag {
+      font-size: .62rem;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: .4rem;
+    }
+
+    .spec-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .92rem;
+      color: var(--ink);
+    }
+
+    .spec-sub {
+      font-size: .7rem;
+      color: rgba(17, 16, 16, .45);
+      margin-top: .15rem;
+    }
+
+    footer {
+      background: var(--ink);
+      padding: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .foot-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--mauve-l);
+    }
+
+    footer p {
+      font-size: .72rem;
+      color: rgba(207, 195, 188, .35);
+    }
+
+    /* ════ CAMERA PAGE ════ */
+    #page-camera {
+      background: var(--mauve);
+      min-height: 100vh;
+    }
+
+    .cam-header {
+      padding: 1.3rem 2.5rem;
+      background: var(--mauve-l);
+      border-bottom: 1.5px solid rgba(17, 16, 16, .1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .cam-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -.02em;
+      color: var(--ink);
+    }
+
+    .cam-title em {
+      font-style: normal;
+      color: var(--blue);
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .5rem 1.1rem;
+      background: transparent;
+      border: 1.5px solid rgba(17, 16, 16, .2);
+      border-radius: 99px;
+      cursor: pointer;
+      color: var(--ink);
+      font-size: .8rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .2s;
+    }
+
+    .back-btn:hover {
+      border-color: var(--ink);
+      background: rgba(17, 16, 16, .06);
+    }
+
+    /* WS CONNECT BAR */
+    .ws-bar {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: 1rem 2.5rem;
+      background: var(--ink);
+      flex-wrap: wrap;
+    }
+
+    .ws-bar label {
+      font-size: .72rem;
+      color: rgba(207, 195, 188, .5);
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .ws-input {
+      flex: 1;
+      min-width: 260px;
+      background: rgba(207, 195, 188, .08);
+      border: 1.5px solid rgba(207, 195, 188, .15);
+      border-radius: 8px;
+      padding: .55rem 1rem;
+      color: var(--mauve-l);
+      font-family: 'DM Sans', monospace;
+      font-size: .82rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .ws-input::placeholder {
+      color: rgba(207, 195, 188, .25);
+    }
+
+    .ws-input:focus {
+      border-color: var(--blue);
+    }
+
+    .ws-connect-btn {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: .6rem 1.4rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .2s;
+      box-shadow: 0 0 20px rgba(79, 110, 247, .3);
+    }
+
+    .ws-connect-btn:hover {
+      box-shadow: 0 0 36px rgba(79, 110, 247, .55);
+      transform: translateY(-1px);
+    }
+
+    .ws-disconnect-btn {
+      background: rgba(239, 68, 68, .15);
+      color: var(--red);
+      border: 1.5px solid rgba(239, 68, 68, .3);
+      border-radius: 8px;
+      padding: .6rem 1.2rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: all .2s;
+      display: none;
+    }
+
+    .ws-disconnect-btn:hover {
+      background: rgba(239, 68, 68, .25);
+    }
+
+    .ws-status-pill {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .4rem .9rem;
+      border-radius: 99px;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      background: rgba(207, 195, 188, .06);
+      border: 1px solid rgba(207, 195, 188, .12);
+      color: rgba(207, 195, 188, .4);
+      white-space: nowrap;
+      transition: all .3s;
+    }
+
+    .ws-status-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(207, 195, 188, .3);
+      transition: all .3s;
+    }
+
+    .ws-status-pill.connected {
+      color: var(--green);
+      border-color: rgba(34, 197, 94, .3);
+      background: rgba(34, 197, 94, .08);
+    }
+
+    .ws-status-pill.connected::before {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: blink 1s infinite;
+    }
+
+    .ws-status-pill.error {
+      color: var(--red);
+      border-color: rgba(239, 68, 68, .3);
+      background: rgba(239, 68, 68, .08);
+    }
+
+    .ws-status-pill.error::before {
+      background: var(--red);
+    }
+
+    .cam-body {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 1.5rem;
+      padding: 1.5rem 2.5rem 3rem;
+      align-items: start;
+    }
+
+    .feed-wrap {
+      position: relative;
+      background: var(--ink);
+      border-radius: var(--r);
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      border: 1.5px solid rgba(17, 16, 16, .15);
+    }
+
+    #videoEl {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #canvasEl {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .brk {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-color: var(--blue);
+      border-style: solid;
+    }
+
+    .brk.tl {
+      top: 10px;
+      left: 10px;
+      border-width: 2px 0 0 2px;
+    }
+
+    .brk.tr {
+      top: 10px;
+      right: 10px;
+      border-width: 2px 2px 0 0;
+    }
+
+    .brk.bl {
+      bottom: 10px;
+      left: 10px;
+      border-width: 0 0 2px 2px;
+    }
+
+    .brk.br {
+      bottom: 10px;
+      right: 10px;
+      border-width: 0 2px 2px 0;
+    }
+
+    .sweep {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      top: 0;
+      background: linear-gradient(90deg, transparent, var(--blue), var(--magenta), transparent);
+      opacity: 0;
+      z-index: 3;
+      animation: sweepDown 3s ease-in-out infinite;
+    }
+
+    .cam-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      background: rgba(17, 16, 16, .88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.4rem;
+      transition: opacity .5s;
+    }
+
+    .cam-overlay.gone {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .cam-start-ico {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 0 40px rgba(79, 110, 247, .5);
+      animation: pulseRing 2.5s ease infinite;
+    }
+
+    .cam-start-btn {
+      background: var(--mauve-l);
+      color: var(--ink);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .92rem;
+      padding: .85rem 2.2rem;
+      border-radius: 99px;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .cam-start-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .cam-hint {
+      font-size: .75rem;
+      color: rgba(207, 195, 188, .4);
+      text-align: center;
+      max-width: 260px;
+      line-height: 1.5;
+    }
+
+    .cam-status-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: .6rem 1rem;
+      background: linear-gradient(transparent, rgba(17, 16, 16, .85));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 4;
+    }
+
+    .live-txt {
+      font-size: .65rem;
+      letter-spacing: .1em;
+      color: var(--green);
+      display: none;
+      font-weight: 600;
+    }
+
+    .fps-txt {
+      font-size: .65rem;
+      color: rgba(207, 195, 188, .35);
+    }
+
+    .ctrl-row {
+      display: flex;
+      gap: .6rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ctrl-btn {
+      padding: .55rem 1.2rem;
+      background: transparent;
+      border: 1.5px solid rgba(17, 16, 16, .18);
+      border-radius: 99px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--ink);
+      background: rgba(17, 16, 16, .06);
+    }
+
+    .ctrl-btn:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    /* MODE indicator */
+    .mode-badge {
+      padding: .4rem 1rem;
+      border-radius: 99px;
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .mode-badge.demo-mode {
+      background: rgba(245, 184, 0, .12);
+      color: #b38600;
+      border: 1px solid rgba(245, 184, 0, .25);
+    }
+
+    .mode-badge.live-mode {
+      background: rgba(34, 197, 94, .12);
+      color: var(--green);
+      border: 1px solid rgba(34, 197, 94, .25);
+    }
+
+    .mode-badge::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .cam-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .panel-card {
+      background: var(--mauve-l);
+      border: 1.5px solid rgba(17, 16, 16, .1);
+      border-radius: var(--r);
+      padding: 1.4rem;
+    }
+
+    .pc-title {
+      font-size: .65rem;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(17, 16, 16, .4);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .det-sign-big {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.9rem;
+      letter-spacing: -.03em;
+      color: var(--ink);
+      min-height: 2.4rem;
+      line-height: 1;
+      transition: all .3s;
+    }
+
+    .det-conf-txt {
+      font-size: .75rem;
+      color: var(--blue);
+      margin-top: .3rem;
+      font-weight: 500;
+    }
+
+    .det-msg-txt {
+      font-size: .78rem;
+      color: rgba(17, 16, 16, .5);
+      line-height: 1.6;
+      padding: .6rem .8rem;
+      background: rgba(17, 16, 16, .05);
+      border-left: 2px solid var(--blue);
+      border-radius: 0 6px 6px 0;
+      margin-top: .8rem;
+      min-height: 2.4rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .9rem;
+    }
+
+    .tl-label {
+      font-size: .84rem;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .tog {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      cursor: pointer;
+    }
+
+    .tog input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .tog-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 99px;
+      background: rgba(17, 16, 16, .1);
+      border: 1.5px solid rgba(17, 16, 16, .12);
+      transition: all .3s;
+    }
+
+    .tog-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(17, 16, 16, .3);
+      transition: all .3s;
+    }
+
+    .tog input:checked~.tog-track {
+      background: rgba(79, 110, 247, .2);
+      border-color: var(--blue);
+    }
+
+    .tog input:checked~.tog-thumb {
+      transform: translateX(18px);
+      background: var(--blue);
+      box-shadow: 0 0 8px rgba(79, 110, 247, .5);
+    }
+
+    .cam-lang-row {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+    }
+
+    .cl-b {
+      padding: .25rem .7rem;
+      border-radius: 99px;
+      font-size: .64rem;
+      cursor: pointer;
+      border: 1.5px solid rgba(17, 16, 16, .12);
+      color: rgba(17, 16, 16, .45);
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .2s;
+    }
+
+    .cl-b.active,
+    .cl-b:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(79, 110, 247, .08);
+    }
+
+    .det-log {
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+    }
+
+    .det-log::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .det-log::-webkit-scrollbar-thumb {
+      background: rgba(17, 16, 16, .12);
+      border-radius: 99px;
+    }
+
+    .log-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .45rem .7rem;
+      background: rgba(17, 16, 16, .04);
+      border-radius: 6px;
+      font-size: .72rem;
+      animation: fadeUp .3s ease both;
+    }
+
+    .log-name {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .log-conf {
+      color: var(--blue);
+      font-size: .66rem;
+    }
+
+    .log-time {
+      color: rgba(17, 16, 16, .35);
+      font-size: .62rem;
+    }
+
+    /* KEYFRAMES */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px)rotate(-18deg);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)rotate(-18deg);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .35;
+      }
+    }
+
+    @keyframes ticker {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    @keyframes sweepDown {
+      0% {
+        top: 0%;
+        opacity: 0;
+      }
+
+      5% {
+        opacity: 1;
+      }
+
+      95% {
+        opacity: .7;
+      }
+
+      100% {
+        top: 100%;
+        opacity: 0;
+      }
+    }
+
+    @keyframes pulseRing {
+      0% {
+        box-shadow: 0 0 0 0 rgba(79, 110, 247, .5);
+      }
+
+      70% {
+        box-shadow: 0 0 0 18px transparent;
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 transparent;
+      }
+    }
+
+    @keyframes floatBlue {
+
+      0%,
+      100% {
+        transform: rotate(-18deg) translateY(0);
+      }
+
+      40% {
+        transform: rotate(-16deg) translateY(-14px);
+      }
+
+      70% {
+        transform: rotate(-20deg) translateY(6px);
+      }
+    }
+
+    @keyframes floatMagenta {
+
+      0%,
+      100% {
+        transform: rotate(12deg) translateY(0);
+      }
+
+      35% {
+        transform: rotate(10deg) translateY(-12px);
+      }
+
+      65% {
+        transform: rotate(14deg) translateY(8px);
+      }
+    }
+
+    @keyframes floatGold {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+      }
+
+      50% {
+        transform: translateY(-10px) scale(1.05);
+      }
+    }
+
+    @keyframes floatOrange {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-8px) rotate(5deg);
+      }
+    }
+
+    @media(max-width:900px) {
+      nav ul {
+        display: none;
+      }
+
+      .hero-sub {
+        flex-direction: column;
+        gap: 1.2rem;
+        align-items: flex-start;
+      }
+
+      .feat-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .demo-layout,
+      .cam-body {
+        grid-template-columns: 1fr;
+      }
+
+      .sign-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .specs-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="cur"></div>
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="#" onclick="showPage('landing');return false;">DrishtiAI</a>
+    <ul class="nav-links">
+      <li><a href="#" onclick="showPage('landing');return false;">Home</a></li>
+      <li><a href="#"
+          onclick="showPage('landing');setTimeout(()=>document.getElementById('features').scrollIntoView({behavior:'smooth'}),80);return false;">Features</a>
+      </li>
+      <li><a href="#"
+          onclick="showPage('landing');setTimeout(()=>document.getElementById('demo').scrollIntoView({behavior:'smooth'}),80);return false;">Demo</a>
+      </li>
+      <li><a href="#"
+          onclick="showPage('landing');setTimeout(()=>document.getElementById('arch').scrollIntoView({behavior:'smooth'}),80);return false;">Arch</a>
+      </li>
+    </ul>
+    <button class="nav-cam" onclick="showPage('camera')">📷 Open Camera</button>
+  </nav>
+
+  <!-- ══════════════ LANDING ══════════════ -->
+  <div id="page-landing" class="page active">
+
+    <section id="hero">
+      <div class="blob-blue"></div>
+      <div class="blob-orange"></div>
+      <div class="blob-magenta"></div>
+      <div class="blob-gold"></div>
+      <div class="hero-text-wrap">
+        <span class="hero-line1">DrishtiAI</span>
+        <span class="hero-line2">Vision Beyond Sight</span>
+      </div>
+      <div class="hero-sub">
+        <p class="hero-desc">Real-time traffic sign detection & voice guidance — empowering the visually impaired to
+          navigate independently. YOLOv8 · FastAPI · PaddleOCR.</p>
+        <div class="hero-ctas">
+          <button class="btn-dark" onclick="showPage('camera')">📷 Open Camera</button>
+          <a class="btn-ghost" href="#"
+            onclick="setTimeout(()=>document.getElementById('demo').scrollIntoView({behavior:'smooth'}),80);return false;">Hear
+            Demo →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- TICKER -->
+    <div class="ticker-wrap" aria-hidden="true">
+      <div class="ticker">
+        <div class="ticker-item"><span>91.9%</span>mAP50</div>
+        <div class="ticker-item"><span>2.4ms</span>Inference</div>
+        <div class="ticker-item"><span>15</span>Sign Classes</div>
+        <div class="ticker-item"><span>T4 GPU</span>CUDA</div>
+        <div class="ticker-item"><span>YOLOv8n</span>Detection</div>
+        <div class="ticker-item"><span>PaddleOCR</span>Text</div>
+        <div class="ticker-item"><span>FastAPI</span>WebSocket</div>
+        <div class="ticker-item"><span>3</span>Languages</div>
+        <div class="ticker-item"><span>91.9%</span>mAP50</div>
+        <div class="ticker-item"><span>2.4ms</span>Inference</div>
+        <div class="ticker-item"><span>15</span>Sign Classes</div>
+        <div class="ticker-item"><span>T4 GPU</span>CUDA</div>
+        <div class="ticker-item"><span>YOLOv8n</span>Detection</div>
+        <div class="ticker-item"><span>PaddleOCR</span>Text</div>
+        <div class="ticker-item"><span>FastAPI</span>WebSocket</div>
+        <div class="ticker-item"><span>3</span>Languages</div>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <section id="features" style="background:var(--mauve-l);padding:7rem 2.5rem;position:relative;z-index:10;">
+      <div class="feat-header">
+        <div>
+          <div class="eyebrow">// Capabilities</div>
+          <h2 class="sec-title">AI that <em>speaks</em><br />the road for you</h2>
+        </div>
+        <p style="font-size:.9rem;color:rgba(17,16,16,.5);max-width:300px;line-height:1.6;">Six intelligent modules
+          working in parallel — so nothing goes unnoticed.</p>
+      </div>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="fc-num">01</div><span class="fc-ico">👁️</span>
+          <div class="fc-name">Real-Time Detection</div>
+          <p class="fc-desc">YOLOv8n at 2.4ms/frame, 91.9% mAP50 — trained on 3,530 images over 15 epochs on Tesla T4.
+          </p>
+        </div>
+        <div class="feat-card">
+          <div class="fc-num">02</div><span class="fc-ico">🔊</span>
+          <div class="fc-name">Instant Voice Output</div>
+          <p class="fc-desc">Every detected sign triggers a spoken alert — "Red Light ahead", "Speed Limit 60" — no
+            screen needed.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fc-num">03</div><span class="fc-ico">📖</span>
+          <div class="fc-name">OCR Text Reading</div>
+          <p class="fc-desc">PaddleOCR reads signs, banners, and text in scene — results spoken in under a second.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fc-num">04</div><span class="fc-ico">🌏</span>
+          <div class="fc-name">Regional Languages</div>
+          <p class="fc-desc">Voice in English, Hindi & Marathi — accessible to India's 350M+ regional language speakers.
+          </p>
+        </div>
+        <div class="feat-card">
+          <div class="fc-num">05</div><span class="fc-ico">⚡</span>
+          <div class="fc-name">Multi-Thread Pipeline</div>
+          <p class="fc-desc">Parallel threads for capture, YOLO, OCR, TTS — zero blocking, smooth edge performance.</p>
+        </div>
+        <div class="feat-card">
+          <div class="fc-num">06</div><span class="fc-ico">📡</span>
+          <div class="fc-name">WebSocket Streaming</div>
+          <p class="fc-desc">FastAPI + WebSocket streams detections to any device — phone, earpiece, or wearable.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VOICE DEMO -->
+    <section id="demo" style="background:var(--ink);padding:7rem 2.5rem;position:relative;z-index:10;overflow:hidden;">
+      <div
+        style="position:absolute;top:-200px;right:-200px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(79,110,247,.08),transparent 70%);pointer-events:none;">
+      </div>
+      <div class="demo-eyebrow">// Interactive Demo</div>
+      <h2 class="demo-title">Click a sign.<br /><em>Hear Drishti</em> speak.</h2>
+      <p style="font-size:.9rem;color:rgba(207,195,188,.4);max-width:460px;line-height:1.6;margin-bottom:3.5rem;">
+        Simulate what a visually impaired user hears when Drishti detects a sign.</p>
+      <div class="demo-layout">
+        <div>
+          <div class="sign-grid" id="signGrid"></div>
+        </div>
+        <div class="voice-panel">
+          <div class="vp-head">
+            <div class="vp-dot" id="vpDot"></div><span class="vp-status" id="vpStatus">READY — SELECT A SIGN</span>
+          </div>
+          <div class="vp-name" id="vpName">—</div>
+          <div class="vp-msg" id="vpMsg">Voice output will appear here…</div>
+          <button class="vp-speak" id="vpSpeak" disabled>🔊 Speak Again</button>
+          <div class="lang-row">
+            <button class="lang-b active" data-lang="en-US" onclick="setDemoLang(this)">EN</button>
+            <button class="lang-b" data-lang="hi-IN" onclick="setDemoLang(this)">हिं</button>
+            <button class="lang-b" data-lang="mr-IN" onclick="setDemoLang(this)">मर</button>
+          </div>
+          <div class="conf-section">
+            <div class="conf-labels"><span>Confidence</span><span id="confVal">—</span></div>
+            <div class="conf-track">
+              <div class="conf-fill" id="confFill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCH -->
+    <section id="arch" style="background:var(--mauve);padding:7rem 2.5rem;position:relative;z-index:10;">
+      <div class="eyebrow">// Architecture</div>
+      <h2 class="sec-title" style="margin-bottom:1rem;">How <em>Drishti</em> works</h2>
+      <p style="font-size:.9rem;color:rgba(17,16,16,.5);max-width:440px;line-height:1.65;">Fully parallelised — raw
+        frame to voice output in milliseconds.</p>
+      <div class="arch-row">
+        <div class="arch-step">
+          <div class="as-num">01</div>
+          <div class="as-ico">📷</div>
+          <div class="as-name">Camera</div>
+          <div class="as-sub">Capture Thread</div>
+        </div>
+        <div class="arch-step">
+          <div class="as-num">02</div>
+          <div class="as-ico">🧠</div>
+          <div class="as-name">YOLOv8n</div>
+          <div class="as-sub">Colab Inference</div>
+        </div>
+        <div class="arch-step">
+          <div class="as-num">03</div>
+          <div class="as-ico">📖</div>
+          <div class="as-name">PaddleOCR</div>
+          <div class="as-sub">OCR Thread</div>
+        </div>
+        <div class="arch-step">
+          <div class="as-num">04</div>
+          <div class="as-ico">📡</div>
+          <div class="as-name">FastAPI WS</div>
+          <div class="as-sub">ngrok Tunnel</div>
+        </div>
+        <div class="arch-step">
+          <div class="as-num">05</div>
+          <div class="as-ico">🔊</div>
+          <div class="as-name">TTS Engine</div>
+          <div class="as-sub">Browser Voice</div>
+        </div>
+      </div>
+      <div class="specs-grid">
+        <div class="spec-card">
+          <div class="spec-tag">Model</div>
+          <div class="spec-val">YOLOv8n · 8.3.0</div>
+          <div class="spec-sub">2.69M params · 6.8 GFLOPs</div>
+        </div>
+        <div class="spec-card">
+          <div class="spec-tag">Dataset</div>
+          <div class="spec-val">Self-Driving Cars v6</div>
+          <div class="spec-sub">3530 train · 801 val · 15 classes</div>
+        </div>
+        <div class="spec-card">
+          <div class="spec-tag">Training</div>
+          <div class="spec-val">Tesla T4 · CUDA:0</div>
+          <div class="spec-sub">15 epochs · 0.29 hrs · AMP</div>
+        </div>
+        <div class="spec-card">
+          <div class="spec-tag">Results</div>
+          <div class="spec-val">mAP50: 91.9%</div>
+          <div class="spec-sub">Precision 95.1% · Recall 83.5%</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="foot-logo">DrishtiAI</div>
+      <p>YOLOv8 · FastAPI · PaddleOCR · WebSocket · ngrok</p>
+      <p>© 2026 · MIT AOE Alandi</p>
+    </footer>
+  </div>
+
+  <!-- ══════════════ CAMERA PAGE ══════════════ -->
+  <div id="page-camera" class="page">
+    <div class="cam-header">
+      <button class="back-btn" onclick="fullStop();showPage('landing')">← Back</button>
+      <div class="cam-title"><em>Drishti</em>AI — Live Detection</div>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mode-badge demo-mode" id="modeBadge">Demo Mode</span>
+        <div class="ws-status-pill" id="wsPill">Disconnected</div>
+      </div>
+    </div>
+
+    <!-- WS CONNECT BAR -->
+    <div class="ws-bar">
+      <label>Local WebSocket URL</label>
+      <input class="ws-input" id="wsInput" type="text" placeholder="ws://localhost:8000/ws"
+        value="ws://localhost:8000/ws" />
+      <button class="ws-connect-btn" id="wsConnectBtn" onclick="connectWS()">Connect to Local Backend</button>
+      <button class="ws-disconnect-btn" id="wsDisconnectBtn" onclick="disconnectWS()">Disconnect</button>
+      <span style="font-size:.7rem;color:rgba(207,195,188,.3);max-width:220px;line-height:1.4;">
+        Make sure the local <strong style="color:rgba(207,195,188,.5);">backend</strong> is running first
+      </span>
+    </div>
+
+    <div class="cam-body">
+      <div>
+        <div class="feed-wrap">
+          <video id="videoEl" autoplay playsinline muted></video>
+          <canvas id="canvasEl"></canvas>
+          <div class="brk tl"></div>
+          <div class="brk tr"></div>
+          <div class="brk bl"></div>
+          <div class="brk br"></div>
+          <div class="sweep" id="sweep"></div>
+          <div class="cam-overlay" id="camOverlay">
+            <div class="cam-start-ico">📷</div>
+            <button class="cam-start-btn" onclick="startCamera()">Start Camera</button>
+            <p class="cam-hint">Camera is local · No video sent to server · Only frames for inference</p>
+          </div>
+          <div class="cam-status-bar">
+            <span class="live-txt" id="liveTxt">● LIVE</span>
+            <span class="fps-txt" id="fpsTxt"></span>
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" id="btnStart" onclick="startCamera()">▶ Start</button>
+          <button class="ctrl-btn" id="btnStop" onclick="stopCamera()" disabled>⏹ Stop</button>
+          <button class="ctrl-btn" onclick="clearLog()">🗑 Clear</button>
+          <span style="font-size:.72rem;color:rgba(17,16,16,.45);line-height:1.5;flex:1;">
+            <strong style="color:var(--blue);">Connected?</strong> Frames are sent to your local YOLOv8 backend every
+            150ms.
+            Not connected? Demo simulation runs instead.
+          </span>
+        </div>
+      </div>
+
+      <!-- PANEL -->
+      <div class="cam-panel">
+        <div class="panel-card">
+          <div class="pc-title">Current Detection
+            <span
+              style="background:rgba(79,110,247,.1);border:1px solid rgba(79,110,247,.2);padding:.15rem .5rem;border-radius:4px;font-size:.58rem;color:var(--blue);">LIVE</span>
+          </div>
+          <div class="det-sign-big" id="detBig">—</div>
+          <div class="det-conf-txt" id="detConf"></div>
+          <div class="det-msg-txt" id="detMsg">Waiting for detection…</div>
+          <div style="margin-top:1rem;">
+            <div
+              style="display:flex;justify-content:space-between;font-size:.62rem;color:rgba(17,16,16,.4);margin-bottom:.35rem;">
+              <span>Confidence</span><span id="camConfVal">—</span>
+            </div>
+            <div class="conf-track">
+              <div class="conf-fill" id="camConfFill"
+                style="background:linear-gradient(90deg,var(--blue),var(--magenta));"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="pc-title">Voice Output</div>
+          <div class="toggle-row">
+            <span class="tl-label">🔊 Auto-Speak</span>
+            <label class="tog"><input type="checkbox" id="voiceTog" checked>
+              <div class="tog-track"></div>
+              <div class="tog-thumb"></div>
+            </label>
+          </div>
+          <div class="cam-lang-row">
+            <button class="cl-b active" data-lang="en-US" onclick="setCamLang(this)">EN</button>
+            <button class="cl-b" data-lang="hi-IN" onclick="setCamLang(this)">हिं</button>
+            <button class="cl-b" data-lang="mr-IN" onclick="setCamLang(this)">मर</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="pc-title">Detection Log <span id="logCnt" style="color:rgba(17,16,16,.35);font-size:.6rem;">0
+              events</span></div>
+          <div class="det-log" id="detLog">
+            <div style="font-size:.73rem;color:rgba(17,16,16,.35);padding:.3rem 0;">No detections yet…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── helpers ── */
+    const $ = id => document.getElementById(id);
+    const synth = window.speechSynthesis;
+
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      $('page-' + name).classList.add('active');
+      window.scrollTo(0, 0);
+      if (name !== 'camera') fullStop();
+    }
+
+    /* ── cursor ── */
+    const cur = $('cur');
+    document.addEventListener('mousemove', e => { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; });
+    document.querySelectorAll('button,a,.sign-btn,.feat-card,.spec-card').forEach(el => {
+      el.addEventListener('mouseenter', () => cur.classList.add('big'));
+      el.addEventListener('mouseleave', () => cur.classList.remove('big'));
+    });
+
+    /* ── sign data ── */
+    const SIGNS = [
+      { ico: '🔴', lbl: 'Red Light', conf: .87, msgs: { 'en-US': 'Red light detected. Please stop immediately.', 'hi-IN': 'लाल बत्ती है। कृपया रुकें।', 'mr-IN': 'लाल दिवा आहे। कृपया थांबा।' } },
+      { ico: '🟢', lbl: 'Green Light', conf: .77, msgs: { 'en-US': 'Green light. Safe to proceed.', 'hi-IN': 'हरी बत्ती है। आगे बढ़ें।', 'mr-IN': 'हिरवा दिवा आहे। पुढे जा।' } },
+      { ico: '🛑', lbl: 'Stop', conf: .94, msgs: { 'en-US': 'Stop sign ahead. Come to a complete stop.', 'hi-IN': 'रुकने का चिह्न है। रुकें।', 'mr-IN': 'थांबण्याचे चिन्ह आहे। पूर्ण थांबा।' } },
+      { ico: '🔢', lbl: 'Speed 20', conf: .98, msgs: { 'en-US': 'Speed limit 20 kilometres per hour.', 'hi-IN': 'गति सीमा बीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा वीस किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 30', conf: .97, msgs: { 'en-US': 'Speed limit 30 kilometres per hour.', 'hi-IN': 'गति सीमा तीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा तीस किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 40', conf: .96, msgs: { 'en-US': 'Speed limit 40 kilometres per hour.', 'hi-IN': 'गति सीमा चालीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा चाळीस किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 50', conf: .94, msgs: { 'en-US': 'Speed limit 50 kilometres per hour.', 'hi-IN': 'गति सीमा पचास किलोमीटर।', 'mr-IN': 'वेग मर्यादा पन्नास किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 60', conf: .93, msgs: { 'en-US': 'Speed limit 60 kilometres per hour.', 'hi-IN': 'गति सीमा साठ किलोमीटर।', 'mr-IN': 'वेग मर्यादा साठ किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 70', conf: .97, msgs: { 'en-US': 'Speed limit 70 kilometres per hour.', 'hi-IN': 'गति सीमा सत्तर किलोमीटर।', 'mr-IN': 'वेग मर्यादा सत्तर किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 80', conf: .95, msgs: { 'en-US': 'Speed limit 80 kilometres per hour.', 'hi-IN': 'गति सीमा अस्सी किलोमीटर।', 'mr-IN': 'वेग मर्यादा ऐंशी किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'Speed 90', conf: .82, msgs: { 'en-US': 'Speed limit 90 kilometres per hour.', 'hi-IN': 'गति सीमा नब्बे किलोमीटर।', 'mr-IN': 'वेग मर्यादा नव्वद किलोमीटर आहे।' } },
+      { ico: '💯', lbl: 'Speed 100', conf: .95, msgs: { 'en-US': 'Speed limit 100 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ किलोमीटर।', 'mr-IN': 'वेग मर्यादा शंभर किलोमीटर आहे।' } },
+      { ico: '🔟', lbl: 'Speed 110', conf: .85, msgs: { 'en-US': 'Speed limit 110 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ दस किलोमीटर।', 'mr-IN': 'वेग मर्यादा एकशे दहा किलोमीटर आहे।' } },
+      { ico: '🔟', lbl: 'Speed 120', conf: .98, msgs: { 'en-US': 'Speed limit 120 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ बीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा एकशे वीस किलोमीटर आहे।' } },
+    ];
+
+    /* ── demo panel ── */
+    let demoLang = 'en-US', curSign = null;
+    const grid = $('signGrid');
+    SIGNS.forEach(s => {
+      const b = document.createElement('button');
+      b.className = 'sign-btn';
+      b.innerHTML = `<span class="sico">${s.ico}</span><span class="slbl">${s.lbl}</span>`;
+      b.onclick = () => selectDemo(s, b);
+      grid.appendChild(b);
+    });
+    function selectDemo(s, btn) {
+      document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active'); curSign = s;
+      $('vpName').textContent = s.lbl;
+      $('vpMsg').textContent = s.msgs[demoLang] || s.msgs['en-US'];
+      $('vpSpeak').disabled = false;
+      $('confFill').style.width = (s.conf * 100) + '%';
+      $('confVal').textContent = (s.conf * 100).toFixed(1) + '%';
+      speakIt(s.msgs[demoLang] || s.msgs['en-US'], demoLang, 'vpDot', 'vpStatus');
+    }
+    function setDemoLang(el) {
+      document.querySelectorAll('.lang-b').forEach(b => b.classList.remove('active'));
+      el.classList.add('active'); demoLang = el.dataset.lang;
+      if (curSign) { $('vpMsg').textContent = curSign.msgs[demoLang] || curSign.msgs['en-US']; speakIt(curSign.msgs[demoLang], demoLang, 'vpDot', 'vpStatus'); }
+    }
+    $('vpSpeak').onclick = () => { if (curSign) speakIt(curSign.msgs[demoLang], demoLang, 'vpDot', 'vpStatus'); };
+
+    function speakIt(msg, lang, dotId, stId) {
+      if (!synth || !msg) return; synth.cancel();
+      const u = new SpeechSynthesisUtterance(msg);
+
+      // Marathi fix: mr-IN is unsupported in most browsers.
+      // Use hi-IN voice engine — it handles Devanagari perfectly
+      // and sounds natural for Marathi text too.
+      if (lang === 'mr-IN') {
+        u.lang = 'hi-IN';
+        u.rate = .88;   // slightly slower — Marathi words are longer
+        u.pitch = 1.0;
+      } else {
+        u.lang = lang;
+        u.rate = .95;
+        u.pitch = 1.05;
+      }
+
+      const dot = $(dotId), st = $(stId);
+      if (dot) u.onstart = () => { dot.classList.add('on'); if (st) st.textContent = 'SPEAKING…'; };
+      if (dot) u.onend = () => { dot.classList.remove('on'); if (st) st.textContent = 'READY — SELECT A SIGN'; };
+      synth.speak(u);
+    }
+
+    /* ══════════════════════════════════
+       WEBSOCKET — Colab connection
+    ══════════════════════════════════ */
+    let ws = null, wsConnected = false;
+
+    function connectWS() {
+      console.log('connectWS called');
+      const inputEl = document.getElementById('wsInput');
+      if (!inputEl) { console.error('wsInput element not found'); return; }
+
+      const url = inputEl.value.trim();
+      console.log('Connecting to:', url);
+
+      if (!url) {
+        alert('Paste your wss:// URL from Colab first!');
+        return;
+      }
+      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        alert('URL must start with ws:// or wss://\nYou entered: ' + url);
+        return;
+      }
+
+      if (ws) { try { ws.close(); } catch (e) { } ws = null; }
+
+      setWsStatus('connecting');
+
+      try { ws = new WebSocket(url); }
+      catch (e) {
+        console.error('WS create failed:', e);
+        alert('Could not open WebSocket:\n' + e.message);
+        setWsStatus('error');
+        return;
+      }
+
+      // 8s timeout
+      const tid = setTimeout(() => {
+        if (!wsConnected) {
+          setWsStatus('error');
+          alert('Timed out.\n\nCheck:\n1. Local backend is running (uvicorn main:app --reload)\n2. URL is correct (ws://localhost:8000/ws)');
+          try { ws.close(); } catch (e) { }
+        }
+      }, 8000);
+
+      ws.onopen = () => {
+        clearTimeout(tid);
+        wsConnected = true;
+        setWsStatus('connected');
+        document.getElementById('wsConnectBtn').style.display = 'none';
+        document.getElementById('wsDisconnectBtn').style.display = 'inline-flex';
+        document.getElementById('modeBadge').textContent = 'Live — Local YOLOv8';
+        document.getElementById('modeBadge').className = 'mode-badge live-mode';
+        stopDemoInterval();
+        if (stream) startFrameSending();
+        console.log('Connected to Local Backend!');
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.detections && data.detections.length > 0) handleDetections(data.detections);
+        } catch (err) { console.warn('Bad WS message:', err); }
+      };
+
+      ws.onerror = (err) => {
+        clearTimeout(tid);
+        wsConnected = false;
+        setWsStatus('error');
+        console.error('WS error:', err);
+      };
+
+      ws.onclose = (e) => {
+        clearTimeout(tid);
+        wsConnected = false;
+        stopFrameSending();
+        setWsStatus('disconnected');
+        document.getElementById('wsConnectBtn').style.display = 'inline-flex';
+        document.getElementById('wsDisconnectBtn').style.display = 'none';
+        document.getElementById('modeBadge').textContent = 'Demo Mode';
+        document.getElementById('modeBadge').className = 'mode-badge demo-mode';
+        // Don't auto-start fake detections on disconnect
+        console.log('WS closed. Code:', e.code);
+      };
+    }
+
+    function disconnectWS() {
+      if (ws) { ws.close(); ws = null; }
+      wsConnected = false;
+      setWsStatus('disconnected');
+      $('wsConnectBtn').style.display = 'inline-flex';
+      $('wsDisconnectBtn').style.display = 'none';
+      $('modeBadge').textContent = 'Demo Mode';
+      $('modeBadge').className = 'mode-badge demo-mode';
+      // No fake detections — connect to local backend for real YOLOv8
+    }
+
+    function setWsStatus(state) {
+      const pill = $('wsPill');
+      pill.className = 'ws-status-pill';
+      if (state === 'connected') { pill.classList.add('connected'); pill.textContent = 'Connected ✓'; }
+      else if (state === 'error') { pill.classList.add('error'); pill.textContent = 'Error — check URL'; }
+      else if (state === 'connecting') { pill.textContent = 'Connecting…'; }
+      else { pill.textContent = 'Disconnected'; }
+    }
+
+    /* ── Frame sending loop ── */
+    let frameInterval = null;
+    function startFrameSending() {
+      if (frameInterval) clearInterval(frameInterval);
+      frameInterval = setInterval(() => {
+        if (!wsConnected || !stream || !ws || ws.readyState !== WebSocket.OPEN) return;
+        const v = $('videoEl');
+        const c = document.createElement('canvas');
+        c.width = 320; c.height = 240; // small for speed
+        c.getContext('2d').drawImage(v, 0, 0, 320, 240);
+        const b64 = c.toDataURL('image/jpeg', .7).split(',')[1];
+        ws.send(JSON.stringify({ frame: b64 }));
+      }, 150); // ~6-7 fps to local backend
+    }
+    function stopFrameSending() { if (frameInterval) { clearInterval(frameInterval); frameInterval = null; } }
+
+    /* ── Handle real detections from Backend ── */
+    let camLang = 'en-US', logCount = 0, lastSpoken = '', cooldown = 0;
+    function setCamLang(el) { document.querySelectorAll('.cl-b').forEach(b => b.classList.remove('active')); el.classList.add('active'); camLang = el.dataset.lang; }
+
+    function handleDetections(detections) {
+      // Pick highest confidence detection
+      const top = detections.reduce((a, b) => b.conf > a.conf ? b : a);
+      const conf = top.conf;
+      const label = top.label;
+
+      // Find matching sign for voice message
+      const signData = SIGNS.find(s => s.lbl.toLowerCase() === label.toLowerCase())
+        || { lbl: label, msgs: { 'en-US': label + ' detected.', 'hi-IN': label + ' पहचाना गया।', 'mr-IN': label + ' आढळले आहे।' } };
+
+      $('detBig').textContent = label;
+      $('detConf').textContent = 'Confidence: ' + (conf * 100).toFixed(1) + '%';
+      $('detMsg').textContent = signData.msgs['en-US'];
+      $('camConfFill').style.width = (conf * 100) + '%';
+      $('camConfVal').textContent = (conf * 100).toFixed(1) + '%';
+
+      // Draw ALL bounding boxes
+      drawBoxes(detections);
+      addLog(label, conf);
+
+      // Voice
+      const voiceOn = $('voiceTog').checked;
+      const now = Date.now();
+      if (voiceOn && (label !== lastSpoken || now - cooldown > 4000)) {
+        lastSpoken = label; cooldown = now;
+        const msg = signData.msgs[camLang] || signData.msgs['en-US'];
+        speakIt(msg, camLang, null, null);
+      }
+    }
+
+    function drawBoxes(detections) {
+      const c = $('canvasEl');
+      const v = $('videoEl');
+      if (!c || !v) return;
+      // Scale from model coords to canvas display size
+      const scaleX = c.offsetWidth / 320;
+      const scaleY = c.offsetHeight / 240;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+
+      detections.forEach(d => {
+        const [x1, y1, x2, y2] = d.bbox;
+        const bx = x1 * scaleX, by = y1 * scaleY;
+        const bw = (x2 - x1) * scaleX, bh = (y2 - y1) * scaleY;
+        const color = d.color || '#4f6ef7';
+
+        // Box
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh);
+        ctx.fillStyle = color + '22'; ctx.fillRect(bx, by, bw, bh);
+        // Label bg
+        const labelW = ctx.measureText(d.label).width + 60;
+        ctx.fillStyle = color; ctx.fillRect(bx, by - 22, labelW, 22);
+        // Label text
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px DM Sans,sans-serif';
+        ctx.fillText(d.label + '  ' + Math.round(d.conf * 100) + '%', bx + 6, by - 7);
+      });
+      // Fade after 1.8s
+      setTimeout(() => ctx.clearRect(0, 0, c.width, c.height), 1800);
+    }
+
+    /* ── CAMERA ── */
+    let stream = null, demoInt = null, fCount = 0, lastFps = Date.now();
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        const v = $('videoEl'); v.srcObject = stream; await v.play();
+        $('canvasEl').width = v.videoWidth || 640; $('canvasEl').height = v.videoHeight || 480;
+        $('camOverlay').classList.add('gone');
+        $('liveTxt').style.display = 'block';
+        $('sweep').style.opacity = '1';
+        $('btnStart').disabled = true; $('btnStop').disabled = false;
+
+        if (wsConnected) {
+          startFrameSending(); // real YOLOv8 mode
+        }
+        // Demo simulation disabled — connect to Backend for real detections
+
+        setInterval(() => {
+          $('fpsTxt').textContent = Math.round(fCount / ((Date.now() - lastFps) / 1000)) + ' FPS';
+          fCount = 0; lastFps = Date.now();
+        }, 1000);
+        drawLoop();
+      } catch (e) { alert('Camera access denied. Allow camera permissions and try again.'); }
+    }
+
+    function stopCamera() {
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      stopDemoInterval(); stopFrameSending();
+      $('camOverlay').classList.remove('gone');
+      $('liveTxt').style.display = 'none';
+      $('sweep').style.opacity = '0';
+      $('btnStart').disabled = false; $('btnStop').disabled = true;
+      synth.cancel();
+    }
+
+    function fullStop() { stopCamera(); disconnectWS(); }
+
+    function drawLoop() { if (!stream) return; fCount++; requestAnimationFrame(drawLoop); }
+
+    /* ── Demo simulation (when not connected to Colab) ── */
+    function startDemoInterval() {
+      if (demoInt) return;
+      demoInt = setInterval(() => {
+        if (wsConnected) return; // hand over to real WS
+        const s = SIGNS[Math.floor(Math.random() * SIGNS.length)];
+        const conf = (.75 + Math.random() * .22);
+        handleDetections([{
+          label: s.lbl, conf,
+          bbox: [
+            Math.round(Math.random() * 160 + 20),
+            Math.round(Math.random() * 80 + 20),
+            Math.round(Math.random() * 160 + 160),
+            Math.round(Math.random() * 80 + 100)
+          ],
+          color: '#4f6ef7'
+        }]);
+      }, 2200);
+    }
+    function stopDemoInterval() { if (demoInt) { clearInterval(demoInt); demoInt = null; } }
+
+    function addLog(name, conf) {
+      const log = $('detLog');
+      if (logCount === 0) log.innerHTML = '';
+      logCount++; $('logCnt').textContent = logCount + ' event' + (logCount > 1 ? 's' : '');
+      const t = new Date();
+      const time = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ':' + t.getSeconds().toString().padStart(2, '0');
+      const el = document.createElement('div'); el.className = 'log-item';
+      el.innerHTML = `<span class="log-name">${name}</span><span class="log-conf">${(conf * 100).toFixed(1)}%</span><span class="log-time">${time}</span>`;
+      log.insertBefore(el, log.firstChild);
+      while (log.children.length > 20) log.removeChild(log.lastChild);
+    }
+    function clearLog() { logCount = 0; $('logCnt').textContent = '0 events'; $('detLog').innerHTML = '<div style="font-size:.73rem;color:rgba(17,16,16,.35);padding:.3rem 0;">No detections yet…</div>'; }
+
+    /* ── scroll reveal ── */
+    const io = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.style.animation = 'fadeUp .6s ease both'; io.unobserve(e.target); } }), { threshold: .08 });
+    document.querySelectorAll('.feat-card,.spec-card,.arch-step').forEach(el => { el.style.opacity = '0'; io.observe(el); });
+  </script>
+</body>
+
+</html>
