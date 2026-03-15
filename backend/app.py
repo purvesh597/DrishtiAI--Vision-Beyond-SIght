@@ -63,7 +63,7 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             # ── Run YOLOv8 inference ──
-            results = model(frame, conf=0.4, verbose=False)[0]
+            results = model(frame, conf=0.55, verbose=False)[0]
 
             detections = []
             for box in results.boxes:
@@ -88,20 +88,56 @@ async def websocket_endpoint(ws: WebSocket):
 def get_color(label):
     """Return a hex color per class for bounding boxes"""
     color_map = {
-        "Red Light":   "#ef4444",
-        "Green Light": "#22c55e",
-        "Stop":        "#f97316",
-        "Speed 20":    "#4f6ef7",
-        "Speed 30":    "#4f6ef7",
-        "Speed 40":    "#4f6ef7",
-        "Speed 50":    "#4f6ef7",
-        "Speed 60":    "#4f6ef7",
-        "Speed 70":    "#4f6ef7",
-        "Speed 80":    "#4f6ef7",
-        "Speed 90":    "#4f6ef7",
-        "Speed 100":   "#4f6ef7",
-        "Speed 110":   "#4f6ef7",
-        "Speed 120":   "#4f6ef7",
+        # Lights
+        "red_light":        "#ef4444",
+        "green_light":      "#22c55e",
+        "yellow_light":     "#f5b800",
+        # Stop / Danger
+        "stop":             "#ef4444",
+        "no_entry":         "#ef4444",
+        "do_not_stop":      "#dc2626",
+        # Prohibitions
+        "do_not_turn_left": "#b91c1c",
+        "do_not_turn_right":"#b91c1c",
+        "do_not_u_turn":    "#b91c1c",
+        "no_overtaking":    "#b91c1c",
+        "no_parking":       "#b91c1c",
+        "no_stop":          "#b91c1c",
+        "no_waiting":       "#b91c1c",
+        # Speed limits
+        "speed_limit_20":   "#4f6ef7",
+        "speed_limit_30":   "#4f6ef7",
+        "speed_limit_40":   "#4f6ef7",
+        "speed_limit_50":   "#4f6ef7",
+        "speed_limit_60":   "#4f6ef7",
+        "speed_limit_70":   "#4f6ef7",
+        "speed_limit_80":   "#4f6ef7",
+        "speed_limit_100":  "#4f6ef7",
+        "speed_limit_120":  "#4f6ef7",
+        # Warnings
+        "warning":          "#f97316",
+        "speed_bump":       "#f97316",
+        "narrow_road":      "#f97316",
+        "railway_crossing": "#f97316",
+        "road_work":        "#f97316",
+        "t_intersection_l": "#f97316",
+        "school_nearby":    "#f97316",
+        "children":         "#f97316",
+        # Info / Direction
+        "crosswalk":        "#06b6d4",
+        "give_way":         "#f5b800",
+        "left_turn":        "#4f6ef7",
+        "right_turn":       "#4f6ef7",
+        "u_turn":           "#4f6ef7",
+        "enter_left_lane":  "#4f6ef7",
+        "left_lane_enter":  "#4f6ef7",
+        "road_main":        "#4f6ef7",
+        # Misc
+        "bicycle":          "#06b6d4",
+        "bus_stop":         "#06b6d4",
+        "parking":          "#06b6d4",
+        "refueling":        "#06b6d4",
+        "truck":            "#f97316",
     }
     return color_map.get(label, "#d832f5")
 

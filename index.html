@@ -472,7 +472,7 @@
 
     .sign-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: .6rem;
     }
 
@@ -1812,20 +1812,57 @@
 
     /* ── sign data ── */
     const SIGNS = [
-      { ico: '🔴', lbl: 'Red Light', conf: .87, msgs: { 'en-US': 'Red light detected. Please stop immediately.', 'hi-IN': 'लाल बत्ती है। कृपया रुकें।', 'mr-IN': 'लाल दिवा आहे। कृपया थांबा।' } },
-      { ico: '🟢', lbl: 'Green Light', conf: .77, msgs: { 'en-US': 'Green light. Safe to proceed.', 'hi-IN': 'हरी बत्ती है। आगे बढ़ें।', 'mr-IN': 'हिरवा दिवा आहे। पुढे जा।' } },
-      { ico: '🛑', lbl: 'Stop', conf: .94, msgs: { 'en-US': 'Stop sign ahead. Come to a complete stop.', 'hi-IN': 'रुकने का चिह्न है। रुकें।', 'mr-IN': 'थांबण्याचे चिन्ह आहे। पूर्ण थांबा।' } },
-      { ico: '🔢', lbl: 'Speed 20', conf: .98, msgs: { 'en-US': 'Speed limit 20 kilometres per hour.', 'hi-IN': 'गति सीमा बीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा वीस किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 30', conf: .97, msgs: { 'en-US': 'Speed limit 30 kilometres per hour.', 'hi-IN': 'गति सीमा तीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा तीस किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 40', conf: .96, msgs: { 'en-US': 'Speed limit 40 kilometres per hour.', 'hi-IN': 'गति सीमा चालीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा चाळीस किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 50', conf: .94, msgs: { 'en-US': 'Speed limit 50 kilometres per hour.', 'hi-IN': 'गति सीमा पचास किलोमीटर।', 'mr-IN': 'वेग मर्यादा पन्नास किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 60', conf: .93, msgs: { 'en-US': 'Speed limit 60 kilometres per hour.', 'hi-IN': 'गति सीमा साठ किलोमीटर।', 'mr-IN': 'वेग मर्यादा साठ किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 70', conf: .97, msgs: { 'en-US': 'Speed limit 70 kilometres per hour.', 'hi-IN': 'गति सीमा सत्तर किलोमीटर।', 'mr-IN': 'वेग मर्यादा सत्तर किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 80', conf: .95, msgs: { 'en-US': 'Speed limit 80 kilometres per hour.', 'hi-IN': 'गति सीमा अस्सी किलोमीटर।', 'mr-IN': 'वेग मर्यादा ऐंशी किलोमीटर आहे।' } },
-      { ico: '🔢', lbl: 'Speed 90', conf: .82, msgs: { 'en-US': 'Speed limit 90 kilometres per hour.', 'hi-IN': 'गति सीमा नब्बे किलोमीटर।', 'mr-IN': 'वेग मर्यादा नव्वद किलोमीटर आहे।' } },
-      { ico: '💯', lbl: 'Speed 100', conf: .95, msgs: { 'en-US': 'Speed limit 100 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ किलोमीटर।', 'mr-IN': 'वेग मर्यादा शंभर किलोमीटर आहे।' } },
-      { ico: '🔟', lbl: 'Speed 110', conf: .85, msgs: { 'en-US': 'Speed limit 110 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ दस किलोमीटर।', 'mr-IN': 'वेग मर्यादा एकशे दहा किलोमीटर आहे।' } },
-      { ico: '🔟', lbl: 'Speed 120', conf: .98, msgs: { 'en-US': 'Speed limit 120 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ बीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा एकशे वीस किलोमीटर आहे।' } },
+      // Lights
+      { ico: '🔴', lbl: 'red_light', conf: .87, msgs: { 'en-US': 'Red light detected. Please stop immediately.', 'hi-IN': 'लाल बत्ती है। कृपया रुकें।', 'mr-IN': 'लाल दिवा आहे। कृपया थांबा।' } },
+      { ico: '🟢', lbl: 'green_light', conf: .77, msgs: { 'en-US': 'Green light. Safe to proceed.', 'hi-IN': 'हरी बत्ती है। आगे बढ़ें।', 'mr-IN': 'हिरवा दिवा आहे। पुढे जा।' } },
+      { ico: '🟡', lbl: 'yellow_light', conf: .82, msgs: { 'en-US': 'Yellow light. Slow down and prepare to stop.', 'hi-IN': 'पीली बत्ती है। धीमा करें।', 'mr-IN': 'पिवळा दिवा आहे। वेग कमी करा।' } },
+      // Stop / Entry
+      { ico: '🛑', lbl: 'stop', conf: .94, msgs: { 'en-US': 'Stop sign ahead. Come to a complete stop.', 'hi-IN': 'रुकने का चिह्न है। रुकें।', 'mr-IN': 'थांबण्याचे चिन्ह आहे। पूर्ण थांबा।' } },
+      { ico: '⛔', lbl: 'no_entry', conf: .91, msgs: { 'en-US': 'No entry. Do not proceed.', 'hi-IN': 'प्रवेश निषेध। आगे न जाएं।', 'mr-IN': 'प्रवेश बंद. पुढे जाऊ नका।' } },
+      { ico: '🚫', lbl: 'do_not_stop', conf: .85, msgs: { 'en-US': 'Do not stop in this area.', 'hi-IN': 'इस क्षेत्र में न रुकें।', 'mr-IN': 'या भागात थांबू नका।' } },
+      // Prohibitions
+      { ico: '🚫', lbl: 'do_not_turn_left', conf: .88, msgs: { 'en-US': 'Left turn prohibited.', 'hi-IN': 'बाएं मुड़ना मना है।', 'mr-IN': 'डावीकडे वळण्यास मनाई आहे।' } },
+      { ico: '🚫', lbl: 'do_not_turn_right', conf: .86, msgs: { 'en-US': 'Right turn prohibited.', 'hi-IN': 'दाएं मुड़ना मना है।', 'mr-IN': 'उजवीकडे वळण्यास मनाई आहे।' } },
+      { ico: '🚫', lbl: 'do_not_u_turn', conf: .84, msgs: { 'en-US': 'U-turn not allowed here.', 'hi-IN': 'यू-टर्न मना है।', 'mr-IN': 'यू-टर्न करण्यास मनाई आहे।' } },
+      { ico: '🚫', lbl: 'no_overtaking', conf: .89, msgs: { 'en-US': 'No overtaking allowed.', 'hi-IN': 'ओवरटेक करना मना है।', 'mr-IN': 'ओव्हरटेक करण्यास मनाई आहे।' } },
+      { ico: '🅿️', lbl: 'no_parking', conf: .92, msgs: { 'en-US': 'No parking zone.', 'hi-IN': 'पार्किंग निषेध क्षेत्र।', 'mr-IN': 'पार्किंग बंद क्षेत्र।' } },
+      { ico: '🚫', lbl: 'no_stop', conf: .83, msgs: { 'en-US': 'No stopping allowed.', 'hi-IN': 'रुकना मना है।', 'mr-IN': 'थांबण्यास मनाई आहे।' } },
+      { ico: '🚫', lbl: 'no_waiting', conf: .81, msgs: { 'en-US': 'No waiting allowed.', 'hi-IN': 'प्रतीक्षा करना मना है।', 'mr-IN': 'थांबून राहण्यास मनाई आहे।' } },
+      // Speed limits
+      { ico: '🔢', lbl: 'speed_limit_20', conf: .98, msgs: { 'en-US': 'Speed limit 20 kilometres per hour.', 'hi-IN': 'गति सीमा बीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा वीस किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'speed_limit_30', conf: .97, msgs: { 'en-US': 'Speed limit 30 kilometres per hour.', 'hi-IN': 'गति सीमा तीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा तीस किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'speed_limit_40', conf: .96, msgs: { 'en-US': 'Speed limit 40 kilometres per hour.', 'hi-IN': 'गति सीमा चालीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा चाळीस किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'speed_limit_50', conf: .94, msgs: { 'en-US': 'Speed limit 50 kilometres per hour.', 'hi-IN': 'गति सीमा पचास किलोमीटर।', 'mr-IN': 'वेग मर्यादा पन्नास किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'speed_limit_60', conf: .93, msgs: { 'en-US': 'Speed limit 60 kilometres per hour.', 'hi-IN': 'गति सीमा साठ किलोमीटर।', 'mr-IN': 'वेग मर्यादा साठ किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'speed_limit_70', conf: .97, msgs: { 'en-US': 'Speed limit 70 kilometres per hour.', 'hi-IN': 'गति सीमा सत्तर किलोमीटर।', 'mr-IN': 'वेग मर्यादा सत्तर किलोमीटर आहे।' } },
+      { ico: '🔢', lbl: 'speed_limit_80', conf: .95, msgs: { 'en-US': 'Speed limit 80 kilometres per hour.', 'hi-IN': 'गति सीमा अस्सी किलोमीटर।', 'mr-IN': 'वेग मर्यादा ऐंशी किलोमीटर आहे।' } },
+      { ico: '💯', lbl: 'speed_limit_100', conf: .95, msgs: { 'en-US': 'Speed limit 100 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ किलोमीटर।', 'mr-IN': 'वेग मर्यादा शंभर किलोमीटर आहे।' } },
+      { ico: '🔟', lbl: 'speed_limit_120', conf: .98, msgs: { 'en-US': 'Speed limit 120 kilometres per hour.', 'hi-IN': 'गति सीमा एक सौ बीस किलोमीटर।', 'mr-IN': 'वेग मर्यादा एकशे वीस किलोमीटर आहे।' } },
+      // Warnings
+      { ico: '⚠️', lbl: 'warning', conf: .80, msgs: { 'en-US': 'Warning sign ahead. Proceed with caution.', 'hi-IN': 'चेतावनी का चिह्न। सावधानी से आगे बढ़ें।', 'mr-IN': 'चेतावणीचे चिन्ह. सावधगिरीने पुढे जा।' } },
+      { ico: '🚸', lbl: 'children', conf: .86, msgs: { 'en-US': 'Children crossing area. Slow down.', 'hi-IN': 'बच्चों का क्षेत्र। धीमा करें।', 'mr-IN': 'मुलांचा परिसर. वेग कमी करा।' } },
+      { ico: '🏫', lbl: 'school_nearby', conf: .88, msgs: { 'en-US': 'School zone nearby. Drive slowly.', 'hi-IN': 'स्कूल क्षेत्र है। धीरे चलें।', 'mr-IN': 'शाळेचा परिसर. हळू चालवा।' } },
+      { ico: '🚧', lbl: 'road_work', conf: .85, msgs: { 'en-US': 'Road work ahead. Proceed slowly.', 'hi-IN': 'आगे सड़क कार्य। धीमे चलें।', 'mr-IN': 'पुढे रस्ता कामे. हळू जा।' } },
+      { ico: '⚠️', lbl: 'speed_bump', conf: .82, msgs: { 'en-US': 'Speed bump ahead. Slow down.', 'hi-IN': 'आगे स्पीड ब्रेकर। धीमा करें।', 'mr-IN': 'पुढे स्पीड ब्रेकर. वेग कमी करा।' } },
+      { ico: '⚠️', lbl: 'narrow_road', conf: .79, msgs: { 'en-US': 'Narrow road ahead.', 'hi-IN': 'आगे संकरी सड़क।', 'mr-IN': 'पुढे अरुंद रस्ता।' } },
+      { ico: '🚂', lbl: 'railway_crossing', conf: .90, msgs: { 'en-US': 'Railway crossing ahead. Look both ways.', 'hi-IN': 'रेलवे क्रॉसिंग। दोनों ओर देखें।', 'mr-IN': 'रेल्वे क्रॉसिंग. दोन्ही बाजू पहा।' } },
+      { ico: '⚠️', lbl: 't_intersection_l', conf: .78, msgs: { 'en-US': 'T-intersection ahead.', 'hi-IN': 'आगे टी-चौराहा।', 'mr-IN': 'पुढे टी-चौक आहे।' } },
+      // Direction
+      { ico: '⬅️', lbl: 'left_turn', conf: .91, msgs: { 'en-US': 'Left turn ahead.', 'hi-IN': 'आगे बायां मोड़।', 'mr-IN': 'पुढे डावे वळण।' } },
+      { ico: '➡️', lbl: 'right_turn', conf: .90, msgs: { 'en-US': 'Right turn ahead.', 'hi-IN': 'आगे दायां मोड़।', 'mr-IN': 'पुढे उजवे वळण।' } },
+      { ico: '↩️', lbl: 'u_turn', conf: .88, msgs: { 'en-US': 'U-turn permitted ahead.', 'hi-IN': 'आगे यू-टर्न।', 'mr-IN': 'पुढे यू-टर्न।' } },
+      { ico: '⬅️', lbl: 'enter_left_lane', conf: .84, msgs: { 'en-US': 'Enter left lane.', 'hi-IN': 'बायीं लेन में जाएं।', 'mr-IN': 'डाव्या लेनमध्ये जा।' } },
+      { ico: '⬅️', lbl: 'left_lane_enter', conf: .83, msgs: { 'en-US': 'Enter left lane.', 'hi-IN': 'बायीं लेन में जाएं।', 'mr-IN': 'डाव्या लेनमध्ये जा।' } },
+      { ico: '🛣️', lbl: 'road_main', conf: .85, msgs: { 'en-US': 'Main road ahead.', 'hi-IN': 'मुख्य सड़क आगे।', 'mr-IN': 'पुढे मुख्य रस्ता।' } },
+      // Crossing / Give way
+      { ico: '🚶', lbl: 'crosswalk', conf: .87, msgs: { 'en-US': 'Pedestrian crosswalk. Watch for pedestrians.', 'hi-IN': 'पैदल यात्री क्रॉसिंग। पैदल चलने वालों का ध्यान रखें।', 'mr-IN': 'पादचारी क्रॉसिंग. पादचाऱ्यांकडे लक्ष द्या।' } },
+      { ico: '🔺', lbl: 'give_way', conf: .86, msgs: { 'en-US': 'Give way to other traffic.', 'hi-IN': 'दूसरे वाहनों को रास्ता दें।', 'mr-IN': 'इतर वाहनांना रस्ता द्या।' } },
+      // Misc
+      { ico: '🚲', lbl: 'bicycle', conf: .83, msgs: { 'en-US': 'Bicycle zone detected.', 'hi-IN': 'साइकिल क्षेत्र।', 'mr-IN': 'सायकल क्षेत्र।' } },
+      { ico: '🚏', lbl: 'bus_stop', conf: .89, msgs: { 'en-US': 'Bus stop ahead.', 'hi-IN': 'आगे बस स्टॉप।', 'mr-IN': 'पुढे बस थांबा।' } },
+      { ico: '🅿️', lbl: 'parking', conf: .91, msgs: { 'en-US': 'Parking area available.', 'hi-IN': 'पार्किंग उपलब्ध।', 'mr-IN': 'पार्किंग उपलब्ध आहे।' } },
+      { ico: '⛽', lbl: 'refueling', conf: .88, msgs: { 'en-US': 'Refueling station ahead.', 'hi-IN': 'आगे ईंधन स्टेशन।', 'mr-IN': 'पुढे इंधन भरण्याचे ठिकाण।' } },
+      { ico: '🚚', lbl: 'truck', conf: .85, msgs: { 'en-US': 'Truck zone. Watch for heavy vehicles.', 'hi-IN': 'ट्रक क्षेत्र। भारी वाहनों का ध्यान रखें।', 'mr-IN': 'ट्रक क्षेत्र. जड वाहनांकडे लक्ष द्या।' } },
     ];
 
     /* ── demo panel ── */
