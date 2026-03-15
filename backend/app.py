@@ -63,7 +63,7 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             # ── Run YOLOv8 inference ──
-            results = model(frame, conf=0.55, verbose=False)[0]
+            results = model(frame, conf=0.65, verbose=False)[0]
 
             detections = []
             for box in results.boxes:

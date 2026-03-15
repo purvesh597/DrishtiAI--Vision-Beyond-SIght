@@ -2038,20 +2038,26 @@
     function stopFrameSending() { if (frameInterval) { clearInterval(frameInterval); frameInterval = null; } }
 
     /* ── Handle real detections from Backend ── */
-    let camLang = 'en-US', logCount = 0, lastSpoken = '', cooldown = 0;
+    let camLang = 'en-US', logCount = 0, lastSpoken = '', cooldown = 0, lastLogLabel = '';
     function setCamLang(el) { document.querySelectorAll('.cl-b').forEach(b => b.classList.remove('active')); el.classList.add('active'); camLang = el.dataset.lang; }
+
+    // Make labels human-readable: "speed_limit_60" → "Speed Limit 60"
+    function prettyLabel(lbl) {
+      return lbl.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
 
     function handleDetections(detections) {
       // Pick highest confidence detection
       const top = detections.reduce((a, b) => b.conf > a.conf ? b : a);
       const conf = top.conf;
       const label = top.label;
+      const displayLabel = prettyLabel(label);
 
       // Find matching sign for voice message
       const signData = SIGNS.find(s => s.lbl.toLowerCase() === label.toLowerCase())
-        || { lbl: label, msgs: { 'en-US': label + ' detected.', 'hi-IN': label + ' पहचाना गया।', 'mr-IN': label + ' आढळले आहे।' } };
+        || { lbl: label, msgs: { 'en-US': displayLabel + ' detected.', 'hi-IN': displayLabel + ' पहचाना गया।', 'mr-IN': displayLabel + ' आढळले आहे।' } };
 
-      $('detBig').textContent = label;
+      $('detBig').textContent = displayLabel;
       $('detConf').textContent = 'Confidence: ' + (conf * 100).toFixed(1) + '%';
       $('detMsg').textContent = signData.msgs['en-US'];
       $('camConfFill').style.width = (conf * 100) + '%';
@@ -2059,12 +2065,17 @@
 
       // Draw ALL bounding boxes
       drawBoxes(detections);
-      addLog(label, conf);
 
-      // Voice
+      // Only log if it's a different sign than the last logged one
+      if (label !== lastLogLabel) {
+        addLog(displayLabel, conf);
+        lastLogLabel = label;
+      }
+
+      // Voice — only speak when a NEW sign appears, or after 15s for same sign
       const voiceOn = $('voiceTog').checked;
       const now = Date.now();
-      if (voiceOn && (label !== lastSpoken || now - cooldown > 4000)) {
+      if (voiceOn && (label !== lastSpoken || now - cooldown > 15000)) {
         lastSpoken = label; cooldown = now;
         const msg = signData.msgs[camLang] || signData.msgs['en-US'];
         speakIt(msg, camLang, null, null);
