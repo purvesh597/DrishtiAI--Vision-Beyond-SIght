@@ -1785,8 +1785,8 @@
     <!-- WS CONNECT BAR -->
     <div class="ws-bar">
       <label>Local WebSocket URL</label>
-      <input class="ws-input" id="wsInput" type="text" placeholder="ws://localhost:8000/ws"
-        value="ws://localhost:8000/ws" />
+      <input class="ws-input" id="wsInput" type="text" placeholder="wss://purvesh597-drishtiai.hf.space/ws"
+        value="wss://purvesh597-drishtiai.hf.space/ws" />
       <button class="ws-connect-btn" id="wsConnectBtn" onclick="connectWS()">Connect to Local Backend</button>
       <button class="ws-disconnect-btn" id="wsDisconnectBtn" onclick="disconnectWS()">Disconnect</button>
       <span style="font-size:.7rem;color:rgba(207,195,188,.3);max-width:220px;line-height:1.4;">
@@ -1951,10 +1951,17 @@
         u.lang = 'hi-IN';
         u.rate = .88;   // slightly slower — Marathi words are longer
         u.pitch = 1.0;
+      } else if (lang === 'en-US') {
+        u.lang = lang;
+        u.rate = 1.0;
+        u.pitch = 1.0;
+        const voices = synth.getVoices();
+        const bestVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Samantha') || v.name.includes('Alex')) || voices.find(v => v.lang === 'en-US');
+        if (bestVoice) u.voice = bestVoice;
       } else {
         u.lang = lang;
-        u.rate = .95;
-        u.pitch = 1.05;
+        u.rate = 1.0;
+        u.pitch = 1.0;
       }
 
       const dot = $(dotId), st = $(stId);
@@ -1985,12 +1992,16 @@
         return;
       }
 
-      if (ws) { try { ws.close(); } catch (e) { } ws = null; }
+      if (ws) {
+        try { ws.close(); } catch (e) { }
+        ws = null;
+      }
 
       setWsStatus('connecting');
 
-      try { ws = new WebSocket(url); }
-      catch (e) {
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
         console.error('WS create failed:', e);
         alert('Could not open WebSocket:\n' + e.message);
         setWsStatus('error');
@@ -2001,7 +2012,7 @@
       const tid = setTimeout(() => {
         if (!wsConnected) {
           setWsStatus('error');
-          alert('Timed out.\n\nCheck:\n1. Local backend is running (uvicorn main:app --reload)\n2. URL is correct (ws://localhost:8000/ws)');
+          alert('Timed out.\n\nCheck:\n1. Hugging Face Space is built and running\n2. URL is correct (wss://purvesh597-drishtiai.hf.space/ws)');
           try { ws.close(); } catch (e) { }
         }
       }, 8000);
