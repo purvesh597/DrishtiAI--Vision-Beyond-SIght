@@ -833,85 +833,7 @@
       background: rgba(17, 16, 16, .06);
     }
 
-    /* WS CONNECT BAR */
-    .ws-bar {
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      padding: 1rem 2.5rem;
-      background: var(--ink);
-      flex-wrap: wrap;
-    }
-
-    .ws-bar label {
-      font-size: .72rem;
-      color: rgba(207, 195, 188, .5);
-      font-weight: 500;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .ws-input {
-      flex: 1;
-      min-width: 260px;
-      background: rgba(207, 195, 188, .08);
-      border: 1.5px solid rgba(207, 195, 188, .15);
-      border-radius: 8px;
-      padding: .55rem 1rem;
-      color: var(--mauve-l);
-      font-family: 'DM Sans', monospace;
-      font-size: .82rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .ws-input::placeholder {
-      color: rgba(207, 195, 188, .25);
-    }
-
-    .ws-input:focus {
-      border-color: var(--blue);
-    }
-
-    .ws-connect-btn {
-      background: var(--blue);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: .6rem 1.4rem;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: .8rem;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all .2s;
-      box-shadow: 0 0 20px rgba(79, 110, 247, .3);
-    }
-
-    .ws-connect-btn:hover {
-      box-shadow: 0 0 36px rgba(79, 110, 247, .55);
-      transform: translateY(-1px);
-    }
-
-    .ws-disconnect-btn {
-      background: rgba(239, 68, 68, .15);
-      color: var(--red);
-      border: 1.5px solid rgba(239, 68, 68, .3);
-      border-radius: 8px;
-      padding: .6rem 1.2rem;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: .8rem;
-      cursor: pointer;
-      transition: all .2s;
-      display: none;
-    }
-
-    .ws-disconnect-btn:hover {
-      background: rgba(239, 68, 68, .25);
-    }
-
+    /* WS STATUS PILL */
     .ws-status-pill {
       display: flex;
       align-items: center;
@@ -1777,22 +1699,12 @@
       <button class="back-btn" onclick="fullStop();showPage('landing')">← Back</button>
       <div class="cam-title"><em>Drishti</em>AI — Live Detection</div>
       <div style="display:flex;align-items:center;gap:.75rem;">
-        <span class="mode-badge demo-mode" id="modeBadge">Demo Mode</span>
-        <div class="ws-status-pill" id="wsPill">Disconnected</div>
+        <span class="mode-badge demo-mode" id="modeBadge">Connecting…</span>
+        <div class="ws-status-pill" id="wsPill">Connecting…</div>
       </div>
     </div>
 
-    <!-- WS CONNECT BAR -->
-    <div class="ws-bar">
-      <label>Local WebSocket URL</label>
-      <input class="ws-input" id="wsInput" type="text" placeholder="wss://purvesh597-drishtiai.hf.space/ws"
-        value="wss://purvesh597-drishtiai.hf.space/ws" />
-      <button class="ws-connect-btn" id="wsConnectBtn" onclick="connectWS()">Connect to Local Backend</button>
-      <button class="ws-disconnect-btn" id="wsDisconnectBtn" onclick="disconnectWS()">Disconnect</button>
-      <span style="font-size:.7rem;color:rgba(207,195,188,.3);max-width:220px;line-height:1.4;">
-        Make sure the local <strong style="color:rgba(207,195,188,.5);">backend</strong> is running first
-      </span>
-    </div>
+    <!-- Auto-connects to HuggingFace backend -->
 
     <div class="cam-body">
       <div>
@@ -1819,9 +1731,8 @@
           <button class="ctrl-btn" id="btnStop" onclick="stopCamera()" disabled>⏹ Stop</button>
           <button class="ctrl-btn" onclick="clearLog()">🗑 Clear</button>
           <span style="font-size:.72rem;color:rgba(17,16,16,.45);line-height:1.5;flex:1;">
-            <strong style="color:var(--blue);">Connected?</strong> Frames are sent to your local YOLOv8 backend every
-            150ms.
-            Not connected? Demo simulation runs instead.
+            <strong style="color:var(--blue);">Live Detection</strong> — Frames are sent to the HuggingFace backend
+            every 150ms for real-time YOLOv8 inference.
           </span>
         </div>
       </div>
@@ -1884,7 +1795,11 @@
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       $('page-' + name).classList.add('active');
       window.scrollTo(0, 0);
-      if (name !== 'camera') fullStop();
+      if (name === 'camera') {
+        connectWS(); // auto-connect when entering camera page
+      } else {
+        fullStop();
+      }
     }
 
     /* ── cursor ── */
@@ -1971,63 +1886,46 @@
     }
 
     /* ══════════════════════════════════
-       WEBSOCKET — Colab connection
+       WEBSOCKET — Auto-connect to HuggingFace
     ══════════════════════════════════ */
-    let ws = null, wsConnected = false;
+    const WS_URL = 'wss://purvesh597-drishtiai.hf.space/ws';
+    let ws = null, wsConnected = false, reconnectTimer = null;
 
     function connectWS() {
-      console.log('connectWS called');
-      const inputEl = document.getElementById('wsInput');
-      if (!inputEl) { console.error('wsInput element not found'); return; }
+      if (ws && ws.readyState === WebSocket.OPEN) return; // already connected
+      if (ws) { try { ws.close(); } catch (e) { } ws = null; }
 
-      const url = inputEl.value.trim();
-      console.log('Connecting to:', url);
-
-      if (!url) {
-        alert('Paste your wss:// URL from Colab first!');
-        return;
-      }
-      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
-        alert('URL must start with ws:// or wss://\nYou entered: ' + url);
-        return;
-      }
-
-      if (ws) {
-        try { ws.close(); } catch (e) { }
-        ws = null;
-      }
-
+      console.log('Auto-connecting to:', WS_URL);
       setWsStatus('connecting');
 
       try {
-        ws = new WebSocket(url);
+        ws = new WebSocket(WS_URL);
       } catch (e) {
         console.error('WS create failed:', e);
-        alert('Could not open WebSocket:\n' + e.message);
         setWsStatus('error');
+        scheduleReconnect();
         return;
       }
 
-      // 8s timeout
+      // 10s timeout
       const tid = setTimeout(() => {
         if (!wsConnected) {
           setWsStatus('error');
-          alert('Timed out.\n\nCheck:\n1. Hugging Face Space is built and running\n2. URL is correct (wss://purvesh597-drishtiai.hf.space/ws)');
           try { ws.close(); } catch (e) { }
+          scheduleReconnect();
         }
-      }, 8000);
+      }, 10000);
 
       ws.onopen = () => {
         clearTimeout(tid);
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
         wsConnected = true;
         setWsStatus('connected');
-        document.getElementById('wsConnectBtn').style.display = 'none';
-        document.getElementById('wsDisconnectBtn').style.display = 'inline-flex';
-        document.getElementById('modeBadge').textContent = 'Live — Local YOLOv8';
-        document.getElementById('modeBadge').className = 'mode-badge live-mode';
+        $('modeBadge').textContent = 'Live — HuggingFace';
+        $('modeBadge').className = 'mode-badge live-mode';
         stopDemoInterval();
         if (stream) startFrameSending();
-        console.log('Connected to Local Backend!');
+        console.log('✅ Connected to HuggingFace backend!');
       };
 
       ws.onmessage = (e) => {
@@ -2048,33 +1946,41 @@
         clearTimeout(tid);
         wsConnected = false;
         stopFrameSending();
-        setWsStatus('disconnected');
-        document.getElementById('wsConnectBtn').style.display = 'inline-flex';
-        document.getElementById('wsDisconnectBtn').style.display = 'none';
-        document.getElementById('modeBadge').textContent = 'Demo Mode';
-        document.getElementById('modeBadge').className = 'mode-badge demo-mode';
-        // Don't auto-start fake detections on disconnect
-        console.log('WS closed. Code:', e.code);
+        setWsStatus('reconnecting');
+        $('modeBadge').textContent = 'Reconnecting…';
+        $('modeBadge').className = 'mode-badge demo-mode';
+        console.log('WS closed. Code:', e.code, '— will reconnect');
+        scheduleReconnect();
       };
     }
 
+    function scheduleReconnect() {
+      if (reconnectTimer) return; // already scheduled
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        // Only reconnect if we're still on the camera page
+        if ($('page-camera').classList.contains('active')) {
+          connectWS();
+        }
+      }, 5000);
+    }
+
     function disconnectWS() {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
       if (ws) { ws.close(); ws = null; }
       wsConnected = false;
       setWsStatus('disconnected');
-      $('wsConnectBtn').style.display = 'inline-flex';
-      $('wsDisconnectBtn').style.display = 'none';
-      $('modeBadge').textContent = 'Demo Mode';
+      $('modeBadge').textContent = 'Disconnected';
       $('modeBadge').className = 'mode-badge demo-mode';
-      // No fake detections — connect to local backend for real YOLOv8
     }
 
     function setWsStatus(state) {
       const pill = $('wsPill');
       pill.className = 'ws-status-pill';
       if (state === 'connected') { pill.classList.add('connected'); pill.textContent = 'Connected ✓'; }
-      else if (state === 'error') { pill.classList.add('error'); pill.textContent = 'Error — check URL'; }
+      else if (state === 'error') { pill.classList.add('error'); pill.textContent = 'Connection Error'; }
       else if (state === 'connecting') { pill.textContent = 'Connecting…'; }
+      else if (state === 'reconnecting') { pill.textContent = 'Reconnecting…'; }
       else { pill.textContent = 'Disconnected'; }
     }
 

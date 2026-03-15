@@ -1,36 +1,18 @@
-"""
-DrishtiAI — FastAPI WebSocket Backend
-Deployed on HuggingFace Spaces (Docker)
-"""
-
+import asyncio
 import base64
 import json
-import os
 import cv2
 import numpy as np
+import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from ultralytics import YOLO
+import os
+from huggingface_hub import hf_hub_download
 
-# ── Load model ──────────────────────────────────────────
-# Model file must be uploaded to HF Space as best.pt
-MODEL_PATH = "best.pt"
+app = FastAPI()
 
-print(f"Loading model from {MODEL_PATH}...")
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(
-        f"Model not found at {MODEL_PATH}. "
-        "Please upload best.pt to your HuggingFace Space."
-    )
-
-model = YOLO(MODEL_PATH)
-CLASS_NAMES = model.names
-print(f"✅ Model loaded. Classes: {CLASS_NAMES}")
-
-# ── FastAPI app ──────────────────────────────────────────
-app = FastAPI(title="DrishtiAI Backend", version="1.0.0")
-
+# Allow browser (your HTML file) to connect
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,88 +20,92 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Color map for bounding boxes ─────────────────────────
-COLOR_MAP = {
-    "Red Light":   "#ef4444",
-    "Green Light": "#22c55e",
-    "Stop":        "#f97316",
-}
+# Load the model
+try:
+    MODEL_PATH = "best.pt"
+    if not os.path.exists(MODEL_PATH):
+        print(f"📥 Downloading {MODEL_PATH} from Hugging Face Hub...")
+        hf_hub_download(repo_id="purvesh597/drishtiai", filename="best.pt", repo_type="space", local_dir=".")
+    
+    model = YOLO(MODEL_PATH)
+    print("✅ Model loaded:", MODEL_PATH)
+    print("📋 Classes:", model.names)
+except Exception as e:
+    print(f"⚠️ Error loading model at {MODEL_PATH}: {e}")
+    print("⚠️ Please make sure you have downloaded best.pt and placed it in the backend folder.")
+    model = None
 
-# ── Routes ───────────────────────────────────────────────
+
 @app.get("/")
-def root():
-    return {
-        "status":  "DrishtiAI running ✅",
-        "model":   MODEL_PATH,
-        "classes": CLASS_NAMES,
-        "ws_url":  "/ws"
-    }
-
-@app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "DrishtiAI backend running ✅"}
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    client = websocket.client
-    print(f"🔌 Client connected: {client}")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    print("🔌 Browser connected!")
 
     try:
         while True:
-            # ── 1. Receive frame ──────────────────────────
-            raw     = await websocket.receive_text()
+            # ── Receive frame from browser ──
+            raw = await ws.receive_text()
             payload = json.loads(raw)
-            b64     = payload.get("frame", "")
+            frame_b64 = payload.get("frame", "")
 
-            if not b64:
-                await websocket.send_text(json.dumps({"detections": []}))
+            # ── Decode base64 → OpenCV image ──
+            img_bytes = base64.b64decode(frame_b64)
+            arr = np.frombuffer(img_bytes, np.uint8)
+            frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+
+            if frame is None or model is None:
+                await ws.send_text(json.dumps({"detections": []}))
                 continue
 
-            # ── 2. Decode JPEG → numpy ────────────────────
-            img_bytes = base64.b64decode(b64)
-            arr       = np.frombuffer(img_bytes, np.uint8)
-            frame     = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            # ── Run YOLOv8 inference ──
+            results = model(frame, conf=0.4, verbose=False)[0]
 
-            if frame is None:
-                await websocket.send_text(json.dumps({"detections": []}))
-                continue
-
-            # ── 3. YOLOv8 inference ───────────────────────
-            results = model.predict(
-                source  = frame,
-                conf    = 0.45,
-                iou     = 0.5,
-                verbose = False,
-            )[0]
-
-            # ── 4. Build response ─────────────────────────
             detections = []
             for box in results.boxes:
-                x1, y1, x2, y2 = [round(float(v)) for v in box.xyxy[0]]
-                label = CLASS_NAMES[int(box.cls)]
-                conf  = round(float(box.conf), 3)
+                x1, y1, x2, y2 = [round(v) for v in box.xyxy[0].tolist()]
+                label = model.names[int(box.cls)]
                 detections.append({
                     "label": label,
-                    "conf":  conf,
-                    "bbox":  [x1, y1, x2, y2],
-                    "color": COLOR_MAP.get(label, "#4f6ef7"),
+                    "conf":  round(float(box.conf), 3),
+                    "bbox":  [x1, y1, x2, y2],   # pixel coords
+                    "color": get_color(label)
                 })
 
-            await websocket.send_text(json.dumps({
-                "detections": detections,
-                "count":      len(detections),
-            }))
-
-            if detections:
-                print(f"  → {[(d['label'], d['conf']) for d in detections]}")
+            # ── Send detections back to browser ──
+            await ws.send_text(json.dumps({"detections": detections}))
 
     except WebSocketDisconnect:
-        print(f"🔌 Client disconnected: {client}")
+        print("🔌 Browser disconnected")
     except Exception as e:
-        print(f"⚠️  Error: {type(e).__name__}: {e}")
-        try:
-            await websocket.send_text(json.dumps({"detections": [], "error": str(e)}))
-        except Exception:
-            pass
+        print(f"⚠️ Error: {e}")
+
+
+def get_color(label):
+    """Return a hex color per class for bounding boxes"""
+    color_map = {
+        "Red Light":   "#ef4444",
+        "Green Light": "#22c55e",
+        "Stop":        "#f97316",
+        "Speed 20":    "#4f6ef7",
+        "Speed 30":    "#4f6ef7",
+        "Speed 40":    "#4f6ef7",
+        "Speed 50":    "#4f6ef7",
+        "Speed 60":    "#4f6ef7",
+        "Speed 70":    "#4f6ef7",
+        "Speed 80":    "#4f6ef7",
+        "Speed 90":    "#4f6ef7",
+        "Speed 100":   "#4f6ef7",
+        "Speed 110":   "#4f6ef7",
+        "Speed 120":   "#4f6ef7",
+    }
+    return color_map.get(label, "#d832f5")
+
+print("✅ FastAPI app ready")
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
