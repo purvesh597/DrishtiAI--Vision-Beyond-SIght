@@ -1968,9 +1968,20 @@
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
-          if (data.detections && data.detections.length > 0) handleDetections(data.detections);
+          if (data.detections) handleDetections(data.detections);
+          
+          // SPEED FIX: Wait for response before sending next frame
+          // This prevents "backlog" and keeps CPU usage low
+          if (frameActive) {
+            const rtt = Math.round(performance.now() - lastFrameTime);
+            // Dynamic delay: if RTT is fast, wait at least 50ms (max 20fps)
+            // If RTT is slow, send next frame immediately (backpressure)
+            const wait = Math.max(50, 150 - rtt); 
+            setTimeout(sendNextFrame, wait);
+          }
         } catch (err) { console.warn('Bad WS message:', err); }
       };
+ Greenland
 
       ws.onerror = (err) => {
         clearTimeout(tid);
@@ -2022,20 +2033,30 @@
     }
 
     /* ── Frame sending loop ── */
-    let frameInterval = null;
-    function startFrameSending() {
-      if (frameInterval) clearInterval(frameInterval);
-      frameInterval = setInterval(() => {
-        if (!wsConnected || !stream || !ws || ws.readyState !== WebSocket.OPEN) return;
-        const v = $('videoEl');
-        const c = document.createElement('canvas');
-        c.width = 320; c.height = 240; // small for speed
-        c.getContext('2d').drawImage(v, 0, 0, 320, 240);
-        const b64 = c.toDataURL('image/jpeg', .7).split(',')[1];
-        ws.send(JSON.stringify({ frame: b64 }));
-      }, 150); // ~6-7 fps to local backend
+    let frameActive = false;
+    let frameCanvas = document.createElement('canvas');
+    frameCanvas.width = 300; // Even smaller for speed
+    frameCanvas.height = 225;
+    let frameCtx = frameCanvas.getContext('2d');
+    let lastFrameTime = 0;
+
+    function sendNextFrame() {
+      if (!frameActive || !wsConnected || !stream || !ws || ws.readyState !== WebSocket.OPEN) return;
+      
+      const v = $('videoEl');
+      frameCtx.drawImage(v, 0, 0, frameCanvas.width, frameCanvas.height);
+      const b64 = frameCanvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+      
+      lastFrameTime = performance.now();
+      ws.send(JSON.stringify({ frame: b64 }));
     }
-    function stopFrameSending() { if (frameInterval) { clearInterval(frameInterval); frameInterval = null; } }
+
+    function startFrameSending() {
+      if (frameActive) return;
+      frameActive = true;
+      sendNextFrame();
+    }
+    function stopFrameSending() { frameActive = false; }
 
     /* ── Handle real detections from Backend ── */
     let camLang = 'en-US', logCount = 0, lastSpoken = '', cooldown = 0, lastLogLabel = '';

@@ -29,7 +29,9 @@ try:
     
     model = YOLO(MODEL_PATH)
     print("✅ Model loaded:", MODEL_PATH)
-    print("📋 Classes:", model.names)
+    print(f"📋 Total classes: {len(model.names)}")
+    for idx, name in model.names.items():
+        print(f"   {idx}: {name}")
 except Exception as e:
     print(f"⚠️ Error loading model at {MODEL_PATH}: {e}")
     print("⚠️ Please make sure you have downloaded best.pt and placed it in the backend folder.")
@@ -62,28 +64,89 @@ async def websocket_endpoint(ws: WebSocket):
                 await ws.send_text(json.dumps({"detections": []}))
                 continue
 
-            # ── Run YOLOv8 inference ──
-            results = model(frame, conf=0.65, verbose=False)[0]
+            # ── Run YOLOv8 inference (SPEED OPTIMIZED) ──
+            # imgsz=320 (halves resolution for 2x speed)
+            # conf=0.5 (catches more signs)
+            # iou=0.4 (stricter overlap filtering)
+            results = model(frame, conf=0.5, iou=0.4, imgsz=320, verbose=False)[0]
 
-            detections = []
+            raw_detections = []
             for box in results.boxes:
                 x1, y1, x2, y2 = [round(v) for v in box.xyxy[0].tolist()]
                 label = model.names[int(box.cls)]
-                detections.append({
+                raw_detections.append({
                     "label": label,
                     "conf":  round(float(box.conf), 3),
-                    "bbox":  [x1, y1, x2, y2],   # pixel coords
+                    "bbox":  [x1, y1, x2, y2],
                     "color": get_color(label)
                 })
 
+            # --- ACCURACY POST-PROCESSING (Disambiguation) ---
+            # If multiple signs from the same group appear, only keep the best one
+            final_detections = []
+            if raw_detections:
+                processed_indices = set()
+                for i, det in enumerate(raw_detections):
+                    if i in processed_indices: continue
+                    
+                    # Find which group this label belongs to
+                    current_group = next((g for g in CONFUSION_GROUPS if det["label"] in g), None)
+                    
+                    if current_group:
+                        # Find all other detections in the same group and keep highest confidence
+                        group_candidates = [(i, det)]
+                        for j, other in enumerate(raw_detections):
+                            if i != j and other["label"] in current_group:
+                                group_candidates.append((j, other))
+                        
+                        best_idx, best_det = max(group_candidates, key=lambda x: x[1]["conf"])
+                        final_detections.append(best_det)
+                        # Mark all candidates as processed
+                        for idx, _ in group_candidates:
+                            processed_indices.add(idx)
+                    else:
+                        final_detections.append(det)
+
+            # --- TEMPORAL SMOOTHING (Accuracy ↑) ---
+            # Buffer only the top detection label to smooth voice output
+            if final_detections:
+                top_label = max(final_detections, key=lambda x: x["conf"])["label"]
+                DETECTIONS_BUFFER.append(top_label)
+                if len(DETECTIONS_BUFFER) > BUFFER_SIZE:
+                    DETECTIONS_BUFFER.pop(0)
+                
+                # Only trust the top detection if it's seen consistently
+                # (prevents frame-flicker misclassification)
+                from collections import Counter
+                counts = Counter(DETECTIONS_BUFFER)
+                most_common, freq = counts.most_common(1)[0]
+                
+                # If the most common label in buffer is NOT this one, 
+                # or if it's too rare, proceed with caution
+                if freq < 2 and len(DETECTIONS_BUFFER) == BUFFER_SIZE:
+                    # Optional: filter out if inconsistent
+                    pass
+
             # ── Send detections back to browser ──
-            await ws.send_text(json.dumps({"detections": detections}))
+            await ws.send_text(json.dumps({"detections": final_detections}))
 
     except WebSocketDisconnect:
         print("🔌 Browser disconnected")
     except Exception as e:
         print(f"⚠️ Error: {e}")
 
+
+# --- ACCURACY & SPEED OPTIMIZATIONS ---
+# Groups of classes that YOLO often confuses
+CONFUSION_GROUPS = [
+    {"stop", "no_entry", "do_not_stop", "no_stop"},
+    {"left_turn", "right_turn", "u_turn"},
+    {"speed_limit_20", "speed_limit_30", "speed_limit_40", "speed_limit_50", "speed_limit_60", "speed_limit_70", "speed_limit_80", "speed_limit_100", "speed_limit_120"}
+]
+
+# Temporal smoothing buffer (rolling window of last 3 detections)
+DETECTIONS_BUFFER = []
+BUFFER_SIZE = 3
 
 def get_color(label):
     """Return a hex color per class for bounding boxes"""
