@@ -1995,15 +1995,9 @@
         try {
           const data = JSON.parse(e.data);
           if (data.detections) handleDetections(data.detections);
-          
-          // SPEED FIX: Minimize wait to 10ms (maximum throughput)
-          // The "Wait-for-Response" backpressure naturally prevents server overload
-          if (frameActive) {
-            setTimeout(sendNextFrame, 10);
-          }
+          // Prototype Mode: Interval is handled by startFrameSending()
         } catch (err) { console.warn('Bad WS message:', err); }
       };
- Greenland
 
       ws.onerror = (err) => {
         clearTimeout(tid);
@@ -2054,8 +2048,9 @@
       else { pill.textContent = 'Disconnected'; }
     }
 
-    /* ── Frame sending loop ── */
+    /* ── Frame sending loop (fixed 3s interval for prototype) ── */
     let frameActive = false;
+    let frameInterval = null;
     let frameCanvas = document.createElement('canvas');
     frameCanvas.width = 300; // Even smaller for speed
     frameCanvas.height = 225;
@@ -2077,8 +2072,12 @@
       if (frameActive) return;
       frameActive = true;
       sendNextFrame();
+      frameInterval = setInterval(sendNextFrame, 3000);
     }
-    function stopFrameSending() { frameActive = false; }
+    function stopFrameSending() { 
+      frameActive = false; 
+      if (frameInterval) { clearInterval(frameInterval); frameInterval = null; }
+    }
 
     /* ── Handle real detections from Backend ── */
     let camLang = 'en-US', logCount = 0, lastSpoken = '', cooldown = 0, lastLogLabel = '';
