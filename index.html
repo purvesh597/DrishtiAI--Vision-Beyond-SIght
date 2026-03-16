@@ -1996,14 +1996,10 @@
           const data = JSON.parse(e.data);
           if (data.detections) handleDetections(data.detections);
           
-          // SPEED FIX: Wait for response before sending next frame
-          // This prevents "backlog" and keeps CPU usage low
+          // SPEED FIX: Minimize wait to 10ms (maximum throughput)
+          // The "Wait-for-Response" backpressure naturally prevents server overload
           if (frameActive) {
-            const rtt = Math.round(performance.now() - lastFrameTime);
-            // Dynamic delay: if RTT is fast, wait at least 50ms (max 20fps)
-            // If RTT is slow, send next frame immediately (backpressure)
-            const wait = Math.max(50, 150 - rtt); 
-            setTimeout(sendNextFrame, wait);
+            setTimeout(sendNextFrame, 10);
           }
         } catch (err) { console.warn('Bad WS message:', err); }
       };
@@ -2119,11 +2115,17 @@
         lastLogLabel = label;
       }
 
-      // Voice — only speak when a NEW sign appears, or after 15s for same sign
+      // Voice — SMART REPETITION
+      // New sign? Speak immediately. 
+      // Same sign? Speak every 10 seconds (reminder).
       const voiceOn = $('voiceTog').checked;
       const now = Date.now();
-      if (voiceOn && (label !== lastSpoken || now - cooldown > 15000)) {
-        lastSpoken = label; cooldown = now;
+      const isNewSign = label !== lastSpoken;
+      const isReminderTime = now - cooldown > 10000;
+
+      if (voiceOn && (isNewSign || isReminderTime)) {
+        lastSpoken = label; 
+        cooldown = now;
         const msg = signData.msgs[camLang] || signData.msgs['en-US'];
         speakIt(msg, camLang, null, null);
       }
