@@ -2072,7 +2072,7 @@
       if (frameActive) return;
       frameActive = true;
       sendNextFrame();
-      frameInterval = setInterval(sendNextFrame, 3000);
+      frameInterval = setInterval(sendNextFrame, 1000);
     }
     function stopFrameSending() { 
       frameActive = false; 
