@@ -65,10 +65,10 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             # ── Run YOLOv8 inference (SPEED OPTIMIZED) ──
-            # imgsz=320 (halves resolution for 2x speed)
+            # imgsz=640 (model native resolution for high accuracy)
             # conf=0.35 (lower threshold for faster assistive feedback)
             # iou=0.4 (stricter overlap filtering)
-            results = model(frame, conf=0.35, iou=0.4, imgsz=320, verbose=False)[0]
+            results = model(frame, conf=0.35, iou=0.4, imgsz=640, verbose=False)[0]
 
             raw_detections = []
             for box in results.boxes:

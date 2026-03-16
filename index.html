@@ -2052,8 +2052,8 @@
     let frameActive = false;
     let frameInterval = null;
     let frameCanvas = document.createElement('canvas');
-    frameCanvas.width = 300; // Even smaller for speed
-    frameCanvas.height = 225;
+    frameCanvas.width = 640; // High resolution for detail
+    frameCanvas.height = 480;
     let frameCtx = frameCanvas.getContext('2d');
     let lastFrameTime = 0;
 
@@ -2134,9 +2134,9 @@
       const c = $('canvasEl');
       const v = $('videoEl');
       if (!c || !v) return;
-      // Scale from model coords to canvas display size
-      const scaleX = c.offsetWidth / 320;
-      const scaleY = c.offsetHeight / 240;
+      // Scale from model coords (640) to canvas display size
+      const scaleX = c.offsetWidth / 640;
+      const scaleY = c.offsetHeight / 480;
       const ctx = c.getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
 
