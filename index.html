@@ -94,6 +94,13 @@
       align-items: center;
       justify-content: space-between;
       padding: 1.4rem 2.5rem;
+      transition: opacity .4s ease, transform .4s ease;
+    }
+
+    nav.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
     }
 
     .nav-logo {
@@ -109,6 +116,9 @@
       display: flex;
       align-items: center;
       gap: .25rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
     }
 
     .nav-links a {
@@ -1795,6 +1805,15 @@
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       $('page-' + name).classList.add('active');
       window.scrollTo(0, 0);
+
+      // Hide main nav for non-landing pages to prevent overlap
+      const mainNav = document.querySelector('nav');
+      if (name === 'landing') {
+        mainNav.classList.remove('hidden');
+      } else {
+        mainNav.classList.add('hidden');
+      }
+
       if (name === 'camera') {
         connectWS(); // auto-connect when entering camera page
       } else {
