@@ -1807,6 +1807,7 @@
     /* ── helpers ── */
     const $ = id => document.getElementById(id);
     const synth = window.speechSynthesis;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     function showPage(name) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1992,6 +1993,7 @@
       };
 
       ws.onmessage = (e) => {
+        isRequestFlying = false; // Response received, clear flag
         try {
           const data = JSON.parse(e.data);
           if (data.detections) handleDetections(data.detections);
@@ -2048,8 +2050,9 @@
       else { pill.textContent = 'Disconnected'; }
     }
 
-    /* ── Frame sending loop (fixed 3s interval for prototype) ── */
+    /* ── Frame sending loop (fixed 1s interval with mobile backpressure) ── */
     let frameActive = false;
+    let isRequestFlying = false; 
     let frameInterval = null;
     let frameCanvas = document.createElement('canvas');
     frameCanvas.width = 640; // High resolution for detail
@@ -2060,22 +2063,31 @@
     function sendNextFrame() {
       if (!frameActive || !wsConnected || !stream || !ws || ws.readyState !== WebSocket.OPEN) return;
       
+      // Mobile Backpressure: If mobile and previous request is still flying, skip this heartbeat
+      if (isMobile && isRequestFlying) return; 
+
       const v = $('videoEl');
       frameCtx.drawImage(v, 0, 0, frameCanvas.width, frameCanvas.height);
-      const b64 = frameCanvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+      
+      // Mobile Optimization: Lower quality for mobile bandwidth
+      const quality = isMobile ? 0.4 : 0.6;
+      const b64 = frameCanvas.toDataURL('image/jpeg', quality).split(',')[1];
       
       lastFrameTime = performance.now();
+      isRequestFlying = true;
       ws.send(JSON.stringify({ frame: b64 }));
     }
 
     function startFrameSending() {
       if (frameActive) return;
       frameActive = true;
+      isRequestFlying = false;
       sendNextFrame();
       frameInterval = setInterval(sendNextFrame, 1000);
     }
     function stopFrameSending() { 
       frameActive = false; 
+      isRequestFlying = false;
       if (frameInterval) { clearInterval(frameInterval); frameInterval = null; }
     }
 
@@ -2164,6 +2176,11 @@
     let stream = null, demoInt = null, fCount = 0, lastFps = Date.now();
 
     async function startCamera() {
+      // Mobile Audio Unlock: A silent utterance on click allows later speech synthesis
+      if (isMobile && synth) {
+        const silent = new SpeechSynthesisUtterance('');
+        silent.volume = 0; synth.speak(silent);
+      }
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         const v = $('videoEl'); v.srcObject = stream; await v.play();
