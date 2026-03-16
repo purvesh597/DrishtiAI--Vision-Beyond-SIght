@@ -1920,8 +1920,18 @@
     $('vpSpeak').onclick = () => { if (curSign) speakIt(curSign.msgs[demoLang], demoLang, 'vpDot', 'vpStatus'); };
 
     function speakIt(msg, lang, dotId, stId) {
-      if (!synth || !msg) return; synth.cancel();
+      if (!synth || !msg) return;
+      
+      // On mobile, aggressive cancel() can sometimes crash the speech engine queue.
+      // We only cancel if we're not on mobile, or if the queue is definitely stuck.
+      if (!isMobile) synth.cancel();
+
       const u = new SpeechSynthesisUtterance(msg);
+      
+      // Warm up voices for mobile
+      if (isMobile && synth.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => { /* cache ready */ };
+      }
 
       // Marathi fix: mr-IN is unsupported in most browsers.
       // Use hi-IN voice engine — it handles Devanagari perfectly
@@ -2176,10 +2186,11 @@
     let stream = null, demoInt = null, fCount = 0, lastFps = Date.now();
 
     async function startCamera() {
-      // Mobile Audio Unlock: A silent utterance on click allows later speech synthesis
+      // Robust Mobile Audio Unlock: A non-empty "space" utterance on click 
+      // is much more effective at unlocking the hardware audio channel.
       if (isMobile && synth) {
-        const silent = new SpeechSynthesisUtterance('');
-        silent.volume = 0; synth.speak(silent);
+        const unlock = new SpeechSynthesisUtterance(" ");
+        unlock.volume = 0; synth.speak(unlock);
       }
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
