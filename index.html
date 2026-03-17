@@ -2086,8 +2086,8 @@
     let isRequestFlying = false; 
     let frameInterval = null;
     let frameCanvas = document.createElement('canvas');
-    frameCanvas.width = 640; // High resolution for detail
-    frameCanvas.height = 480;
+    frameCanvas.width = 1280; // 720p for better distance detail
+    frameCanvas.height = 720;
     let frameCtx = frameCanvas.getContext('2d');
     let lastFrameTime = 0;
 
@@ -2100,8 +2100,8 @@
       const v = $('videoEl');
       frameCtx.drawImage(v, 0, 0, frameCanvas.width, frameCanvas.height);
       
-      // Mobile Optimization: Lower quality for mobile bandwidth
-      const quality = isMobile ? 0.4 : 0.6;
+      // Mobile Optimization: Balanced quality for distance vs bandwidth
+      const quality = isMobile ? 0.65 : 0.8; 
       const b64 = frameCanvas.toDataURL('image/jpeg', quality).split(',')[1];
       
       lastFrameTime = performance.now();
