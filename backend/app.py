@@ -222,12 +222,12 @@ def get_color(label):
     }
 
     if label in red_signs:
-        return "#ef4444"
+        return "#ff0033" # Neon Red
     elif label in orange_signs:
-        return "#f97316"
+        return "#ffcc00" # Neon Gold/Yellow-Orange
     elif label in blue_signs:
-        return "#4f6ef7"
-    return "#d832f5" # Generic magenta for unknown
+        return "#00ffff" # Neon Cyan/Electric Blue
+    return "#ff00ff" # Neon Magenta / Pink
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
