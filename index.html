@@ -42,20 +42,26 @@
       color: var(--ink);
       font-family: 'DM Sans', sans-serif;
       overflow-x: hidden;
-      cursor: none;
+    }
+    
+    /* Custom Cursor logic */
+    @media(min-width: 769px) {
+      body, a, button, .sign-btn, .feat-card, .spec-card {
+        cursor: none !important;
+      }
     }
 
     #cur {
       position: fixed;
       width: 12px;
       height: 12px;
-      background: var(--ink);
+      background: var(--white);
       border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
       transition: width .18s, height .18s;
-      mix-blend-mode: multiply;
+      mix-blend-mode: difference;
     }
 
     #cur.big {
@@ -1463,7 +1469,7 @@
     @media(max-width: 768px) {
       nav { padding: 1rem 1.5rem; }
       .nav-links { display: none; } /* Hide links on mobile for cleaner look */
-      #cur { display: none !important; } /* Hide custom cursor on mobile */
+      #cur { display: none !important; }
       
       .hero-line1 { font-size: clamp(3.2rem, 12vw, 6rem); }
       .hero-line2 { font-size: clamp(1.6rem, 6vw, 2.8rem); line-height: 1.1; }
@@ -1831,11 +1837,19 @@
 
     /* ── cursor ── */
     const cur = $('cur');
-    document.addEventListener('mousemove', e => { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; });
-    document.querySelectorAll('button,a,.sign-btn,.feat-card,.spec-card').forEach(el => {
-      el.addEventListener('mouseenter', () => cur.classList.add('big'));
-      el.addEventListener('mouseleave', () => cur.classList.remove('big'));
-    });
+    // Hide default cursor only if not on mobile
+    if (!isMobile) {
+      document.addEventListener('mousemove', e => {
+        cur.style.left = e.clientX + 'px';
+        cur.style.top = e.clientY + 'px';
+      });
+      document.querySelectorAll('button,a,.sign-btn,.feat-card,.spec-card').forEach(el => {
+        el.addEventListener('mouseenter', () => cur.classList.add('big'));
+        el.addEventListener('mouseleave', () => cur.classList.remove('big'));
+      });
+    } else {
+      cur.style.display = 'none';
+    }
 
     /* ── sign data ── */
     const SIGNS = [
@@ -1916,6 +1930,11 @@
       b.className = 'sign-btn';
       b.innerHTML = `<span class="sico">${s.ico}</span><span class="slbl">${s.lbl}</span>`;
       b.onclick = () => selectDemo(s, b);
+      // Custom cursor support
+      if (!isMobile && cur) {
+        b.addEventListener('mouseenter', () => cur.classList.add('big'));
+        b.addEventListener('mouseleave', () => cur.classList.remove('big'));
+      }
       grid.appendChild(b);
     });
     function selectDemo(s, btn) {
@@ -2106,7 +2125,7 @@
       
       lastFrameTime = performance.now();
       isRequestFlying = true;
-      ws.send(JSON.stringify({ frame: b64 }));
+      ws.send(JSON.stringify({ frame: b64, lang: camLang }));
     }
 
     function startFrameSending() {
@@ -2144,11 +2163,11 @@
       $('detBig').textContent = displayLabel;
       $('detConf').textContent = `Confidence: ${(conf * 100).toFixed(1)}%`;
       
-      // Use static message for speech
+      // Use backend phrase if available, else static message
       const signData = SIGNS.find(s => s.lbl.toLowerCase() === label.toLowerCase())
         || { lbl: label, msgs: { 'en-US': displayLabel + ' detected.', 'hi-IN': displayLabel + ' पहचाना गया।', 'mr-IN': displayLabel + ' आढळले आहे।' } };
       
-      const msgToSpeak = signData.msgs[camLang] || signData.msgs['en-US'];
+      const msgToSpeak = top.phrase || signData.msgs[camLang] || signData.msgs['en-US'];
       $('detMsg').textContent = msgToSpeak;
       
       $('camConfFill').style.width = (conf * 100) + '%';
@@ -2172,8 +2191,7 @@
       if (voiceOn && (isNewSign || isReminderTime)) {
         lastSpoken = label; 
         cooldown = now;
-        // Preferred order: Grok Msg (EN) > Sign Static Msg (Regional) > Fallback
-        const msgToSpeak = (camLang === 'en-US' && grokMsg) ? grokMsg : fallbackMsg;
+        // Backend phrase is now the primary source
         speakIt(msgToSpeak, camLang, null, null);
       }
     }
