@@ -2138,17 +2138,17 @@
       const top = detections.sort((a, b) => b.conf - a.conf)[0];
       const conf = top.conf;
       const label = top.label;
-      const dist = top.distance || 0;
+      const pos = top.position || '';
       const displayLabel = prettyLabel(label);
 
       // UI Updates
       $('detBig').textContent = displayLabel;
-      $('detConf').textContent = `Confidence: ${(conf * 100).toFixed(1)}% | Dist: ${dist}m`;
+      $('detConf').textContent = `Confidence: ${(conf * 100).toFixed(1)}% | ${pos.toUpperCase()}`;
       
       // Use Grok's natural message if available, otherwise fallback
       const grokMsg = top.voice_msg;
       const signData = SIGNS.find(s => s.lbl.toLowerCase() === label.toLowerCase())
-        || { lbl: label, msgs: { 'en-US': displayLabel + ' detected.', 'hi-IN': displayLabel + ' पहचाना गया।', 'mr-IN': displayLabel + ' आढळले आहे।' } };
+        || { lbl: label, msgs: { 'en-US': `${displayLabel} detected ${pos}.`, 'hi-IN': displayLabel + ' पहचाना गया।', 'mr-IN': displayLabel + ' आढळले आहे।' } };
       
       const fallbackMsg = signData.msgs[camLang] || signData.msgs['en-US'];
       $('detMsg').textContent = grokMsg || fallbackMsg;
@@ -2159,10 +2159,11 @@
       // Draw ALL bounding boxes
       drawBoxes(detections);
 
-      // Only log if it's a different sign than the last logged one
-      if (label !== lastLogLabel) {
-        addLog(`${displayLabel} (${dist}m)`, conf);
-        lastLogLabel = label;
+      // Only log if it's a different sign/position than the last logged one
+      const logEntry = `${displayLabel} (${pos})`;
+      if (logEntry !== lastLogLabel) {
+        addLog(logEntry, conf);
+        lastLogLabel = logEntry;
       }
 
       // Voice — SMART REPETITION
@@ -2217,8 +2218,8 @@
         ctx.shadowBlur = 0;
 
         // Label bg with rounded corners (simulation)
-        const distTxt = d.distance ? ` [${d.distance}m]` : '';
-        const labelText = d.label.toUpperCase() + distTxt + ' ' + Math.round(d.conf * 100) + '%';
+        const posTxt = d.position ? ` [${d.position.toUpperCase()}]` : '';
+        const labelText = d.label.toUpperCase() + posTxt + ' ' + Math.round(d.conf * 100) + '%';
         ctx.font = 'bold 13px Syne, sans-serif'; 
         const labelW = ctx.measureText(labelText).width + 14;
         
