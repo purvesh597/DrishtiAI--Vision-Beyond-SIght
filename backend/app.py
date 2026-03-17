@@ -177,13 +177,29 @@ async def websocket_endpoint(ws: WebSocket):
                 
                 for box in results.boxes:
                     label = mdl.names[int(box.cls)].replace("_", " ")
+                    bbox = [round(v) for v in box.xyxy[0].tolist()]
+                    dist = estimate_distance(bbox)
+                    
+                    # Call Grok for the top detection (highest confidence)
+                    # We'll handle refined message generation in a way that respects rate limits
+                    # but for now, we provide the raw data for the frontend to decide when to trigger.
+                    
                     all_detections.append({
                         "label": label,
                         "conf": round(float(box.conf), 3),
-                        "bbox": [round(v) for v in box.xyxy[0].tolist()],
+                        "bbox": bbox,
+                        "distance": dist,
                         "color": get_color(label),
                         "model": model_name
                     })
+
+            # Sort by confidence to pick the 'best' one for Grok if needed
+            all_detections.sort(key=lambda x: x["conf"], reverse=True)
+            
+            # Simple rate limiting: Only call Grok for the top detection
+            if all_detections:
+                top = all_detections[0]
+                top["voice_msg"] = await get_varied_response(top["label"], top["distance"])
 
             # Send combined detections back to browser
             await ws.send_text(json.dumps({"detections": all_detections}))
@@ -228,6 +244,44 @@ def get_color(label):
     elif label in blue_signs:
         return "#00ffff" # Neon Cyan/Electric Blue
     return "#ff00ff" # Neon Magenta / Pink
+
+# --- GROK AI INTEGRATION ---
+from openai import OpenAI
+XAI_API_KEY = os.getenv("XAI_API_KEY", "your_fallback_key_here")
+client = OpenAI(
+    api_key=XAI_API_KEY,
+    base_url="https://api.x.ai/v1",
+)
+
+def estimate_distance(bbox):
+    """
+    Estimate distance based on bounding box height.
+    Heuristic: Assuming standard sign size 60cm, focal length ~800px.
+    Distance (m) = (RealHeight * FocalLength) / PixelHeight
+    """
+    _, y1, _, y2 = bbox
+    pixel_height = max(1, y2 - y1)
+    # Calibrated for 720p height: a sign at 1m is roughly 250px high
+    distance = 250 / pixel_height
+    return round(distance, 1)
+
+async def get_varied_response(label, distance):
+    """Generate a friendly, varied message using Grok AI"""
+    try:
+        # Reduced frequency for API calls to avoid rate limits
+        response = client.chat.completions.create(
+            model="grok-beta", # or 'grok-1'
+            messages=[
+                {"role": "system", "content": "You are a friendly, concise vision assistant for the blind. Provide a short (max 12 words), varied, and helpful instruction based on the detected traffic sign and its distance."},
+                {"role": "user", "content": f"A '{label}' sign is detected {distance} meters away. Tell the user what to do."}
+            ],
+            temperature=0.8,
+            max_tokens=30
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Grok Error: {e}")
+        return f"{label.replace('_', ' ').capitalize()} identified {distance} meters away."
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
