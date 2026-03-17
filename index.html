@@ -1840,8 +1840,8 @@
     /* ── sign data ── */
     const SIGNS = [
       // Prohibitory
-      { ico: '🛑', lbl: 'stop', conf: .95, msgs: { 'en-US': 'Stop sign ahead.', 'hi-IN': 'रुकने का संकेत है।', 'mr-IN': 'थांबण्याचा संकेत आहे।' } },
-      { ico: '⛔', lbl: 'no entry', conf: .92, msgs: { 'en-US': 'No entry.', 'hi-IN': 'प्रवेश निषेध।', 'mr-IN': 'प्रवेश बंदी।' } },
+      { ico: '🛑', lbl: 'stop', conf: .95, msgs: { 'en-US': 'Stop sign is ahead. Please take a complete stop.', 'hi-IN': 'आगे स्टॉप साइन है। कृपया पूरी तरह से रुकें।', 'mr-IN': 'पुढं स्टॉप साईन आहे. कृपया पूर्णपणे थांबा.' } },
+      { ico: '⛔', lbl: 'no entry', conf: .92, msgs: { 'en-US': 'No entry ahead. You should turn back.', 'hi-IN': 'आगे प्रवेश निषेध है। कृपया वापस मुड़ें।', 'mr-IN': 'पुढं प्रवेश बंदी आहे. कृपया परत फिरा.' } },
       { ico: '🚫', lbl: 'all motor vehicle prohibited', conf: .88, msgs: { 'en-US': 'All motor vehicles prohibited.', 'hi-IN': 'सभी मोटर वाहनों का प्रवेश वर्जित।', 'mr-IN': 'सर्व मोटार वाहनांना बंदी।' } },
       { ico: '🔕', lbl: 'horn prohibited', conf: .85, msgs: { 'en-US': 'Horn prohibited.', 'hi-IN': 'हॉर्न बजाना मना है।', 'mr-IN': 'हॉर्न वाजवण्यास मनाई आहे।' } },
       { ico: '⬅️🚫', lbl: 'left turn prohibited', conf: .87, msgs: { 'en-US': 'Left turn prohibited.', 'hi-IN': 'बाएं मुड़ना मना है।', 'mr-IN': 'डावीकडे वळण्यास मनाई आहे।' } },
@@ -1855,7 +1855,7 @@
       
       // Warning
       { ico: '🔄', lbl: 'roundabout', conf: .82, msgs: { 'en-US': 'Roundabout ahead.', 'hi-IN': 'आगे गोल चक्कर है।', 'mr-IN': 'पुढे गोल रस्ता आहे।' } },
-      { ico: '🚶', lbl: 'pedestrian crossing', conf: .87, msgs: { 'en-US': 'Pedestrian crossing.', 'hi-IN': 'पैदल यात्री क्रॉसिंग।', 'mr-IN': 'पादचारी क्रॉसिंग।' } },
+      { ico: '🚶', lbl: 'pedestrian crossing', conf: .87, msgs: { 'en-US': 'Pedestrian crossing ahead. Please slow down.', 'hi-IN': 'आगे पैदल यात्री क्रॉसिंग है। कृपया धीरे चलें।', 'mr-IN': 'पुढं पादचारी क्रॉसिंग आहे. कृपया वेग कमी करा.' } },
       { ico: '⚠️🛣️', lbl: 'slippery road', conf: .80, msgs: { 'en-US': 'Slippery road ahead.', 'hi-IN': 'आगे फिसलन भरी सड़क है।', 'mr-IN': 'पुढे घसरणारा रस्ता आहे।' } },
       { ico: '➕', lbl: 'cross road', conf: .81, msgs: { 'en-US': 'Cross road ahead.', 'hi-IN': 'आगे चौराहा है।', 'mr-IN': 'पुढे चौक आहे।' } },
       { ico: '📉', lbl: 'dangerous dip', conf: .78, msgs: { 'en-US': 'Dangerous dip.', 'hi-IN': 'खतरनाक ढलान।', 'mr-IN': 'धोकादायक खोल रस्ता।' } },
@@ -1874,7 +1874,7 @@
       { ico: '↪️⚠️', lbl: 'right hand curve', conf: .85, msgs: { 'en-US': 'Right hand curve.', 'hi-IN': 'दायां मोड़।', 'mr-IN': 'उजवे वळण।' } },
       { ico: '↪️⤵️', lbl: 'right reverse bend', conf: .84, msgs: { 'en-US': 'Right reverse bend.', 'hi-IN': 'दायां रिवर्स मोड़।', 'mr-IN': 'उजवीकडे वळण घेऊन पुन्हा वळण।' } },
       { ico: '🛣️👐', lbl: 'road widens ahead', conf: .83, msgs: { 'en-US': 'Road widens ahead.', 'hi-IN': 'आगे सड़क चौड़ी हो रही है।', 'mr-IN': 'पुढे रस्ता रुंद होत आहे।' } },
-      { ico: '🏫', lbl: 'school ahead', conf: .88, msgs: { 'en-US': 'School ahead.', 'hi-IN': 'आगे स्कूल है।', 'mr-IN': 'पुढे शाळा आहे।' } },
+      { ico: '🏫', lbl: 'school ahead', conf: .88, msgs: { 'en-US': 'School zone ahead. Slow down and watch for children.', 'hi-IN': 'आगे स्कूल क्षेत्र है। धीरे चलें और बच्चों का ध्यान रखें।', 'mr-IN': 'पुढं शाळा आहे. वेग कमी करा आणि मुलांची काळजी घ्या.' } },
       { ico: '🛣️⬅️', lbl: 'side road left', conf: .81, msgs: { 'en-US': 'Side road left.', 'hi-IN': 'बाईं ओर साइड रोड।', 'mr-IN': 'डावीकडे रस्ता आहे।' } },
       { ico: '🛣️➡️', lbl: 'side road right', conf: .81, msgs: { 'en-US': 'Side road right.', 'hi-IN': 'दाईं ओर साइड रोड।', 'mr-IN': 'उजवीकडे रस्ता आहे।' } },
       { ico: '➕✖️', lbl: 'staggered intersection', conf: .78, msgs: { 'en-US': 'Staggered intersection.', 'hi-IN': 'स्टैगर्ड चौराहा।', 'mr-IN': 'विखुरलेला छेद रस्ता।' } },
@@ -1887,7 +1887,7 @@
       
       // Informatory
       { ico: '⛽', lbl: 'petrol pump ahead', conf: .91, msgs: { 'en-US': 'Petrol pump ahead.', 'hi-IN': 'आगे पेट्रोल पंप है।', 'mr-IN': 'पुढे पेट्रोल पंप आहे।' } },
-      { ico: '🏥', lbl: 'hospital ahead', conf: .90, msgs: { 'en-US': 'Hospital ahead.', 'hi-IN': 'आगे अस्पताल है।', 'mr-IN': 'पुढे रुग्णालय आहे।' } },
+      { ico: '🏥', lbl: 'hospital ahead', conf: .90, msgs: { 'en-US': 'Hospital zone. Please maintain silence.', 'hi-IN': 'अस्पताल क्षेत्र। कृपया शांति बनाए रखें।', 'mr-IN': 'रुग्णालय क्षेत्र. कृपया शांतता राखा.' } },
       
       // Mandatory
       { ico: '⬆️🔵', lbl: 'compulsary ahead', conf: .93, msgs: { 'en-US': 'Compulsory ahead only.', 'hi-IN': 'केवल सीधे चलना अनिवार्य है।', 'mr-IN': 'फक्त समोर जाणे अनिवार्य आहे।' } },
@@ -1899,7 +1899,7 @@
       
       // Speed Limits
       { ico: '💯', lbl: 'speed limit 100', conf: .98, msgs: { 'en-US': 'Speed limit 100.', 'hi-IN': 'गति सीमा एक सौ।', 'mr-IN': 'वेग मर्यादा शंभर।' } },
-      { ico: '3️⃣0️⃣', lbl: 'speed limit 30', conf: .97, msgs: { 'en-US': 'Speed limit 30.', 'hi-IN': 'गति सीमा तीस।', 'mr-IN': 'वेग मर्यादा तीस।' } },
+      { ico: '3️⃣0️⃣', lbl: 'speed limit 30', conf: .97, msgs: { 'en-US': 'Speed limit is 30. Better slow down a bit.', 'hi-IN': 'गति सीमा तीस है। कृपया गति कम करें।', 'mr-IN': 'वेग मर्यादा तीस आहे. कृपया वेग कमी करा.' } },
       { ico: '5️⃣0️⃣', lbl: 'speed limit 50', conf: .96, msgs: { 'en-US': 'Speed limit 50.', 'hi-IN': 'गति सीमा पचास।', 'mr-IN': 'वेग मर्यादा पन्नास।' } },
       
       // Restrictions (Dimensions)
