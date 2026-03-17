@@ -170,10 +170,9 @@ async def websocket_endpoint(ws: WebSocket):
             # Run both models for comprehensive output
             for model_name, mdl in [("traffic", traffic_model), ("currency", currency_model)]:
                 if mdl is None: continue
-                # Optimized for 1.5m distance (imgsz=800)
-                # Traffic is more permissive (0.4) for distant objects
-                c_thr = 0.40 if model_name == "traffic" else 0.55
-                results = mdl(frame, conf=c_thr, iou=0.4, imgsz=800, verbose=False)[0]
+                # Higher threshold (0.60) to avoid false positives with random blue/red objects
+                c_thr = 0.60 if model_name == "traffic" else 0.65
+                results = mdl(frame, conf=c_thr, iou=0.45, imgsz=800, verbose=False)[0]
                 
                 for box in results.boxes:
                     label = mdl.names[int(box.cls)].replace("_", " ")
