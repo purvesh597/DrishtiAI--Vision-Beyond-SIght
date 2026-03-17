@@ -2144,13 +2144,12 @@
       $('detBig').textContent = displayLabel;
       $('detConf').textContent = `Confidence: ${(conf * 100).toFixed(1)}%`;
       
-      // Use Grok's natural message if available, otherwise fallback
-      const grokMsg = top.voice_msg;
+      // Use static message for speech
       const signData = SIGNS.find(s => s.lbl.toLowerCase() === label.toLowerCase())
-        || { lbl: label, msgs: { 'en-US': displayLabel + ' ahead.', 'hi-IN': displayLabel + ' पहचाना गया।', 'mr-IN': displayLabel + ' आढळले आहे।' } };
+        || { lbl: label, msgs: { 'en-US': displayLabel + ' detected.', 'hi-IN': displayLabel + ' पहचाना गया।', 'mr-IN': displayLabel + ' आढळले आहे।' } };
       
-      const fallbackMsg = signData.msgs[camLang] || signData.msgs['en-US'];
-      $('detMsg').textContent = grokMsg || fallbackMsg;
+      const msgToSpeak = signData.msgs[camLang] || signData.msgs['en-US'];
+      $('detMsg').textContent = msgToSpeak;
       
       $('camConfFill').style.width = (conf * 100) + '%';
       $('camConfVal').textContent = (conf * 100).toFixed(1) + '%';

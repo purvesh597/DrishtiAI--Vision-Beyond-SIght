@@ -10,4 +10,3 @@ numpy==1.26.4
 python-multipart==0.0.9
 huggingface-hub
 Pillow==10.3.0
-openai
