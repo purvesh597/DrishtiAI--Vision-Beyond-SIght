@@ -189,13 +189,18 @@ async def websocket_endpoint(ws: WebSocket):
                         "model": model_name
                     })
 
-            # Sort by confidence to pick the 'best' one for Grok if needed
-            all_detections.sort(key=lambda x: x["conf"], reverse=True)
-            
-            # Simple rate limiting: Only call Grok for the top detection
+            # Non-blocking Grok integration with caching
             if all_detections:
                 top = all_detections[0]
-                top["voice_msg"] = await get_varied_response(top["label"], top["position"])
+                cache_key = (top["label"], top["position"])
+                
+                if cache_key in grok_cache:
+                    top["voice_msg"] = grok_cache[cache_key]
+                else:
+                    # Fire and forget Grok fetch in background
+                    asyncio.create_task(fetch_grok_msg(top["label"], top["position"]))
+                    # No voice_msg yet, frontend will use fallback for speed
+                    top["voice_msg"] = None
 
             # Send combined detections back to browser
             await ws.send_text(json.dumps({"detections": all_detections}))
@@ -241,13 +246,19 @@ def get_color(label):
         return "#00ffff" # Neon Cyan/Electric Blue
     return "#ff00ff" # Neon Magenta / Pink
 
-# --- GROK AI INTEGRATION ---
+# --- GROK AI & CACHING ---
 from openai import OpenAI
+import asyncio
+
 XAI_API_KEY = os.getenv("XAI_API_KEY", "your_fallback_key_here")
 client = OpenAI(
     api_key=XAI_API_KEY,
     base_url="https://api.x.ai/v1",
 )
+
+# Global cache for Grok messages: { (label, position): "msg" }
+grok_cache = {}
+active_grok_tasks = set()
 
 def get_spatial_position(bbox, frame_width=1280):
     """
@@ -256,30 +267,39 @@ def get_spatial_position(bbox, frame_width=1280):
     x1, _, x2, _ = bbox
     center_x = (x1 + x2) / 2
     
-    # Divide 1280 into 3 zones: Left (0-426), Center (427-853), Right (854-1280)
     if center_x < frame_width / 3:
-        return "to your left"
+        return "on your left"
     elif center_x > (2 * frame_width) / 3:
-        return "to your right"
+        return "on your right"
     else:
-        return "straight ahead"
+        return "dead ahead"
 
-async def get_varied_response(label, position):
-    """Generate a friendly message with spatial awareness using Grok AI"""
+async def fetch_grok_msg(label, position):
+    """Background task to fetch and cache a human-like message from Grok"""
+    cache_key = (label, position)
+    if cache_key in active_grok_tasks:
+        return
+        
+    active_grok_tasks.add(cache_key)
     try:
-        response = client.chat.completions.create(
+        # Prompt for ultra-human, casual, and friendly speech
+        response = await asyncio.to_thread(client.chat.completions.create,
             model="grok-beta",
             messages=[
-                {"role": "system", "content": "You are a friendly, concise vision assistant for the blind. Provide a short (max 12 words), varied, and helpful instruction based on the detected traffic sign and its relative position."},
-                {"role": "user", "content": f"A '{label}' sign is detected {position}. Tell the user what to do."}
+                {"role": "system", "content": "You are a friendly human friend guiding a blind person. Speak CASUALLY and NATURALLY. No robotic 'detected' phrases. Use things like 'Hey', 'Watch out', 'Mind the...', 'Look, there's a...'. MAX 10 words total."},
+                {"role": "user", "content": f"You see a '{label}' sign {position}. Tell your friend what to do naturally."}
             ],
-            temperature=0.8,
-            max_tokens=30
+            temperature=0.9, # Higher temperature for more variety
+            max_tokens=25
         )
-        return response.choices[0].message.content.strip()
+        msg = response.choices[0].message.content.strip()
+        # Remove common "AI markers"
+        msg = msg.replace('Detected: ', '').replace('Attention: ', '').strip('"')
+        grok_cache[cache_key] = msg
     except Exception as e:
         print(f"Grok Error: {e}")
-        return f"{label.replace('_', ' ').capitalize()} identified {position}."
+    finally:
+        active_grok_tasks.remove(cache_key)
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
