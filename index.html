@@ -2177,9 +2177,11 @@
       const c = $('canvasEl');
       const v = $('videoEl');
       if (!c || !v) return;
-      // Scale from model coords (640) to canvas display size
-      const scaleX = c.offsetWidth / 640;
-      const scaleY = c.offsetHeight / 480;
+      
+      // The backend receives 1280x720 frames (see frameCanvas.width/height)
+      // but earlier code was scaling from 640/480. Correcting to 1280/720.
+      const scaleX = c.offsetWidth / 1280;
+      const scaleY = c.offsetHeight / 720;
       const ctx = c.getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
 
@@ -2189,18 +2191,42 @@
         const bw = (x2 - x1) * scaleX, bh = (y2 - y1) * scaleY;
         const color = d.color || '#4f6ef7';
 
-        // Box
-        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = color + '22'; ctx.fillRect(bx, by, bw, bh);
-        // Label bg
-        const labelW = ctx.measureText(d.label).width + 60;
-        ctx.fillStyle = color; ctx.fillRect(bx, by - 22, labelW, 22);
-        // Label text
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px DM Sans,sans-serif';
-        ctx.fillText(d.label + '  ' + Math.round(d.conf * 100) + '%', bx + 6, by - 7);
+        // Vibrant Sharp Bounding Box with Glow
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4; // Sharper, thicker lines
+        ctx.lineJoin = 'round';
+        
+        // Add neon glow effect
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = color;
+        
+        ctx.strokeRect(bx, by, bw, bh);
+        
+        // Semi-transparent fill
+        ctx.fillStyle = color + '33'; 
+        ctx.fillRect(bx, by, bw, bh);
+        
+        // Reset shadow for text and label bg to keep them sharp
+        ctx.shadowBlur = 0;
+
+        // Label bg with rounded corners (simulation)
+        const labelText = d.label.toUpperCase() + ' ' + Math.round(d.conf * 100) + '%';
+        ctx.font = 'bold 13px Syne, sans-serif'; 
+        const labelW = ctx.measureText(labelText).width + 14;
+        
+        ctx.fillStyle = color;
+        // Position label above if there's room, otherwise inside
+        const labelY = (by - 26 > 0) ? by - 26 : by + 4;
+        ctx.fillRect(bx, labelY, labelW, 22);
+        
+        // Label shadow/text
+        ctx.fillStyle = '#fff';
+        ctx.fillText(labelText, bx + 7, labelY + 16);
       });
-      // Fade after 1.8s
-      setTimeout(() => ctx.clearRect(0, 0, c.width, c.height), 1800);
+
+      // Maintain boxes until next update or clear after 2.5s (increased from 1.8s)
+      if (window.boxClearTimeout) clearTimeout(window.boxClearTimeout);
+      window.boxClearTimeout = setTimeout(() => ctx.clearRect(0, 0, c.width, c.height), 2500);
     }
 
     /* ── CAMERA ── */
