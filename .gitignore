@@ -24,3 +24,9 @@ env/
 backend/backend/
 backend/DrishtiAI/
 backend/drishti-landing.html
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
