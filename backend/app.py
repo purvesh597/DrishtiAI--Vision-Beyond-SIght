@@ -178,28 +178,26 @@ async def websocket_endpoint(ws: WebSocket):
                 for box in results.boxes:
                     label = mdl.names[int(box.cls)].replace("_", " ")
                     bbox = [round(v) for v in box.xyxy[0].tolist()]
-                    pos = get_spatial_position(bbox)
                     
                     all_detections.append({
                         "label": label,
                         "conf": round(float(box.conf), 3),
                         "bbox": bbox,
-                        "position": pos,
                         "color": get_color(label),
                         "model": model_name
                     })
 
-            # Non-blocking Grok integration with caching
+            # Non-blocking Grok integration with label-only caching
             if all_detections:
+                all_detections.sort(key=lambda x: x["conf"], reverse=True)
                 top = all_detections[0]
-                cache_key = (top["label"], top["position"])
+                label = top["label"]
                 
-                if cache_key in grok_cache:
-                    top["voice_msg"] = grok_cache[cache_key]
+                if label in grok_cache:
+                    top["voice_msg"] = grok_cache[label]
                 else:
                     # Fire and forget Grok fetch in background
-                    asyncio.create_task(fetch_grok_msg(top["label"], top["position"]))
-                    # No voice_msg yet, frontend will use fallback for speed
+                    asyncio.create_task(fetch_grok_msg(label))
                     top["voice_msg"] = None
 
             # Send combined detections back to browser
@@ -256,50 +254,45 @@ client = OpenAI(
     base_url="https://api.x.ai/v1",
 )
 
-# Global cache for Grok messages: { (label, position): "msg" }
+# Global cache for Grok messages: { label: "msg" }
 grok_cache = {}
-active_grok_tasks = set()
+active_grok_labels = set()
 
-def get_spatial_position(bbox, frame_width=1280):
-    """
-    Determine if sign is on the left, right, or center.
-    """
-    x1, _, x2, _ = bbox
-    center_x = (x1 + x2) / 2
-    
-    if center_x < frame_width / 3:
-        return "on your left"
-    elif center_x > (2 * frame_width) / 3:
-        return "on your right"
-    else:
-        return "dead ahead"
-
-async def fetch_grok_msg(label, position):
-    """Background task to fetch and cache a human-like message from Grok"""
-    cache_key = (label, position)
-    if cache_key in active_grok_tasks:
+async def fetch_grok_msg(label):
+    """Background task to fetch and cache a warm, advisory message from Grok"""
+    if label in active_grok_labels:
         return
         
-    active_grok_tasks.add(cache_key)
+    active_grok_labels.add(label)
     try:
-        # Prompt for ultra-human, casual, and friendly speech
+        # Prompt for guidance and advice - warm and human
         response = await asyncio.to_thread(client.chat.completions.create,
             model="grok-beta",
             messages=[
-                {"role": "system", "content": "You are a friendly human friend guiding a blind person. Speak CASUALLY and NATURALLY. No robotic 'detected' phrases. Use things like 'Hey', 'Watch out', 'Mind the...', 'Look, there's a...'. MAX 10 words total."},
-                {"role": "user", "content": f"You see a '{label}' sign {position}. Tell your friend what to do naturally."}
+                {"role": "system", "content": "You are a warm, helpful human friend guiding a blind person. You see a traffic sign. Give one short, friendly piece of ADVICE or GUIDANCE. Casual tone. No robotic words. MAX 10 words total. Examples: 'Hey, look out for the stop sign here.' or 'Speed limit is 30, better slow down a bit.'"},
+                {"role": "user", "content": f"You see a '{label}' sign. Give your friend some friendly advice naturally."}
             ],
-            temperature=0.9, # Higher temperature for more variety
+            temperature=0.9,
             max_tokens=25
         )
         msg = response.choices[0].message.content.strip()
-        # Remove common "AI markers"
-        msg = msg.replace('Detected: ', '').replace('Attention: ', '').strip('"')
-        grok_cache[cache_key] = msg
+        msg = msg.strip('"').strip("'")
+        grok_cache[label] = msg
     except Exception as e:
         print(f"Grok Error: {e}")
     finally:
-        active_grok_tasks.remove(cache_key)
+        active_grok_labels.remove(label)
+
+async def pre_cache_common_signs():
+    """Warms up the cache for common signs on startup"""
+    common = ["stop", "pedestrian_crossing", "speed_limit_30", "no_entry"]
+    print("🔥 Warming up AI guidance cache...")
+    tasks = [fetch_grok_msg(lbl.replace("_", " ")) for lbl in common]
+    await asyncio.gather(*tasks)
+    print(f"✅ Pre-cached {len(grok_cache)} common phrases.")
 
 if __name__ == "__main__":
+    # Run pre-cache then start server
+    loop = asyncio.get_event_loop()
+    loop.create_task(pre_cache_common_signs())
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
