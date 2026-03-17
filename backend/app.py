@@ -37,8 +37,8 @@ print("Loading models...")
 try:
     if os.path.exists(TRAFFIC_MODEL_PATH):
         traffic_model = YOLO(TRAFFIC_MODEL_PATH)
-        # Warmup
-        dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+        # Warmup with 800px
+        dummy = np.zeros((800, 800, 3), dtype=np.uint8)
         traffic_model(dummy, verbose=False)
         print("✅ Traffic model loaded")
     else:
@@ -50,8 +50,8 @@ except Exception as e:
 try:
     if os.path.exists(CURRENCY_MODEL_PATH):
         currency_model = YOLO(CURRENCY_MODEL_PATH)
-        # Warmup
-        dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+        # Warmup with 800px
+        dummy = np.zeros((800, 800, 3), dtype=np.uint8)
         currency_model(dummy, verbose=False)
         print("✅ Currency model loaded")
     else:
@@ -170,7 +170,10 @@ async def websocket_endpoint(ws: WebSocket):
             # Run both models for comprehensive output
             for model_name, mdl in [("traffic", traffic_model), ("currency", currency_model)]:
                 if mdl is None: continue
-                results = mdl(frame, conf=0.55, iou=0.4, imgsz=640, verbose=False)[0]
+                # Optimized for 1.5m distance (imgsz=800)
+                # Traffic is more permissive (0.4) for distant objects
+                c_thr = 0.40 if model_name == "traffic" else 0.55
+                results = mdl(frame, conf=c_thr, iou=0.4, imgsz=800, verbose=False)[0]
                 
                 for box in results.boxes:
                     label = mdl.names[int(box.cls)].replace("_", " ")
