@@ -4,15 +4,18 @@ import json
 import cv2
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import io
+import time
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from ultralytics import YOLO
+from PIL import Image
 import os
-from huggingface_hub import hf_hub_download
 
-app = FastAPI()
+app = FastAPI(title="Drishti AI API")
 
-# Allow browser (your HTML file) to connect
+# Allow browser to connect
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,191 +23,184 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load the model
-try:
-    MODEL_PATH = "best.pt"
-    if not os.path.exists(MODEL_PATH):
-        print(f"📥 Downloading {MODEL_PATH} from Hugging Face Hub...")
-        hf_hub_download(repo_id="purvesh597/drishtiai", filename="best.pt", repo_type="space", local_dir=".")
-    
-    model = YOLO(MODEL_PATH)
-    print("✅ Model loaded:", MODEL_PATH)
-    print(f"📋 Total classes: {len(model.names)}")
-    for idx, name in model.names.items():
-        print(f"   {idx}: {name}")
-except Exception as e:
-    print(f"⚠️ Error loading model at {MODEL_PATH}: {e}")
-    print("⚠️ Please make sure you have downloaded best.pt and placed it in the backend folder.")
-    model = None
+# --- MODEL LOADING ---
+MODELS_DIR = "models"
+TRAFFIC_MODEL_PATH = os.path.join(MODELS_DIR, "traffic.pt")
+CURRENCY_MODEL_PATH = os.path.join(MODELS_DIR, "currency.pt")
 
+print("Loading models...")
+try:
+    # Use best.pt as fallback if specific models aren't found yet
+    traffic_model = YOLO(TRAFFIC_MODEL_PATH if os.path.exists(TRAFFIC_MODEL_PATH) else "best.pt")
+    currency_model = YOLO(CURRENCY_MODEL_PATH if os.path.exists(CURRENCY_MODEL_PATH) else "best.pt")
+    
+    # Warmup both models
+    dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+    traffic_model(dummy, verbose=False)
+    currency_model(dummy, verbose=False)
+    print("✅ Both models loaded and warmed up")
+except Exception as e:
+    print(f"⚠️ Error loading models: {e}")
+    traffic_model = None
+    currency_model = None
+
+# --- REST ENDPOINTS (from update_backend.py) ---
 
 @app.get("/")
 def health():
-    return {"status": "DrishtiAI backend running ✅"}
+    return {"status": "DrishtiAI backend running ✅", "models": ["traffic", "currency"]}
 
+@app.post("/detect")
+async def detect(file: UploadFile = File(...), model: str = "traffic"):
+    try:
+        t0 = time.time()
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        img_array = np.array(image)
+
+        mdl = traffic_model if model == "traffic" else currency_model
+        if mdl is None:
+            return JSONResponse({"success": False, "error": "Model not loaded"}, status_code=500)
+            
+        results = mdl(img_array, conf=0.45, verbose=False, imgsz=640)[0]
+
+        detections = []
+        for box in results.boxes:
+            detections.append({
+                "label": mdl.names[int(box.cls)],
+                "confidence": round(float(box.conf), 3),
+                "bbox": [round(float(x), 1) for x in box.xyxy[0].tolist()],
+                "model": model
+            })
+
+        detections.sort(key=lambda x: x["confidence"], reverse=True)
+        elapsed = round(time.time() - t0, 3)
+
+        return JSONResponse({
+            "success": True,
+            "model": model,
+            "count": len(detections),
+            "detections": detections,
+            "inference_ms": elapsed
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.post("/detect/both")
+async def detect_both(file: UploadFile = File(...)):
+    try:
+        t0 = time.time()
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
+        img_array = np.array(image)
+
+        all_detections = []
+        for model_name, mdl in [("traffic", traffic_model), ("currency", currency_model)]:
+            if mdl is None: continue
+            results = mdl(img_array, conf=0.45, verbose=False, imgsz=640)[0]
+            for box in results.boxes:
+                all_detections.append({
+                    "label": mdl.names[int(box.cls)],
+                    "confidence": round(float(box.conf), 3),
+                    "bbox": [round(float(x), 1) for x in box.xyxy[0].tolist()],
+                    "model": model_name
+                })
+
+        all_detections.sort(key=lambda x: x["confidence"], reverse=True)
+        elapsed = round(time.time() - t0, 3)
+
+        return JSONResponse({
+            "success": True,
+            "count": len(all_detections),
+            "detections": all_detections,
+            "inference_ms": elapsed
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+# --- WEBSOCKET ENDPOINT (Compatibility Layer) ---
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
-    print("🔌 Browser connected!")
+    print("🔌 Browser connected via WebSocket!")
 
     try:
         while True:
-            # ── Receive frame from browser ──
+            # Receive frame from browser
             raw = await ws.receive_text()
             payload = json.loads(raw)
             frame_b64 = payload.get("frame", "")
 
-            # ── Decode base64 → OpenCV image ──
+            # Decode base64 → OpenCV image
             img_bytes = base64.b64decode(frame_b64)
             arr = np.frombuffer(img_bytes, np.uint8)
             frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
-            if frame is None or model is None:
+            if frame is None or (traffic_model is None and currency_model is None):
                 await ws.send_text(json.dumps({"detections": []}))
                 continue
 
-            # ── Run YOLOv8 inference (SPEED OPTIMIZED) ──
-            # imgsz=640 (model native resolution for high accuracy)
-            # conf=0.55 (increased to filter false positives like curtains)
-            # iou=0.4 (stricter overlap filtering)
-            results = model(frame, conf=0.55, iou=0.4, imgsz=640, verbose=False)[0]
-
-            raw_detections = []
-            for box in results.boxes:
-                x1, y1, x2, y2 = [round(v) for v in box.xyxy[0].tolist()]
-                label = model.names[int(box.cls)]
-                raw_detections.append({
-                    "label": label,
-                    "conf":  round(float(box.conf), 3),
-                    "bbox":  [x1, y1, x2, y2],
-                    "color": get_color(label)
-                })
-
-            # --- ACCURACY POST-PROCESSING (Disambiguation) ---
-            # If multiple signs from the same group appear, only keep the best one
-            final_detections = []
-            if raw_detections:
-                processed_indices = set()
-                for i, det in enumerate(raw_detections):
-                    if i in processed_indices: continue
-                    
-                    # Find which group this label belongs to
-                    current_group = next((g for g in CONFUSION_GROUPS if det["label"] in g), None)
-                    
-                    if current_group:
-                        # Find all other detections in the same group and keep highest confidence
-                        group_candidates = [(i, det)]
-                        for j, other in enumerate(raw_detections):
-                            if i != j and other["label"] in current_group:
-                                group_candidates.append((j, other))
-                        
-                        best_idx, best_det = max(group_candidates, key=lambda x: x[1]["conf"])
-                        final_detections.append(best_det)
-                        # Mark all candidates as processed
-                        for idx, _ in group_candidates:
-                            processed_indices.add(idx)
-                    else:
-                        final_detections.append(det)
-
-            # --- TEMPORAL SMOOTHING (Accuracy ↑) ---
-            # Buffer only the top detection label to smooth voice output
-            if final_detections:
-                top_label = max(final_detections, key=lambda x: x["conf"])["label"]
-                DETECTIONS_BUFFER.append(top_label)
-                if len(DETECTIONS_BUFFER) > BUFFER_SIZE:
-                    DETECTIONS_BUFFER.pop(0)
+            all_detections = []
+            
+            # Run both models for comprehensive output
+            for model_name, mdl in [("traffic", traffic_model), ("currency", currency_model)]:
+                if mdl is None: continue
+                results = mdl(frame, conf=0.55, iou=0.4, imgsz=640, verbose=False)[0]
                 
-                # Only trust the top detection if it's seen consistently
-                # (prevents frame-flicker misclassification)
-                from collections import Counter
-                counts = Counter(DETECTIONS_BUFFER)
-                most_common, freq = counts.most_common(1)[0]
-                
-                # If the most common label in buffer is NOT this one, 
-                # or if it's too rare, proceed with caution
-                if freq < 2 and len(DETECTIONS_BUFFER) == BUFFER_SIZE:
-                    # Optional: filter out if inconsistent
-                    pass
+                for box in results.boxes:
+                    label = mdl.names[int(box.cls)]
+                    all_detections.append({
+                        "label": label,
+                        "conf": round(float(box.conf), 3),
+                        "bbox": [round(v) for v in box.xyxy[0].tolist()],
+                        "color": get_color(label),
+                        "model": model_name
+                    })
 
-            # ── Send detections back to browser ──
-            await ws.send_text(json.dumps({"detections": final_detections}))
+            # Send combined detections back to browser
+            await ws.send_text(json.dumps({"detections": all_detections}))
 
     except WebSocketDisconnect:
         print("🔌 Browser disconnected")
     except Exception as e:
-        print(f"⚠️ Error: {e}")
-
-
-# --- ACCURACY & SPEED OPTIMIZATIONS ---
-# Groups of classes that YOLO often confuses
-CONFUSION_GROUPS = [
-    {"stop", "no_entry", "do_not_stop", "no_stop"},
-    {"left_turn", "right_turn", "u_turn"},
-    {"speed_limit_20", "speed_limit_30", "speed_limit_40", "speed_limit_50", "speed_limit_60", "speed_limit_70", "speed_limit_80", "speed_limit_100", "speed_limit_120"}
-]
-
-# Temporal smoothing buffer (rolling window of last 3 detections)
-DETECTIONS_BUFFER = []
-BUFFER_SIZE = 3
+        print(f"⚠️ WebSocket Error: {e}")
 
 def get_color(label):
-    """Return a hex color per class for bounding boxes"""
-    color_map = {
-        # Lights
-        "red_light":        "#ef4444",
-        "green_light":      "#22c55e",
-        "yellow_light":     "#f5b800",
-        # Stop / Danger
-        "stop":             "#ef4444",
-        "no_entry":         "#ef4444",
-        "do_not_stop":      "#dc2626",
-        # Prohibitions
-        "do_not_turn_left": "#b91c1c",
-        "do_not_turn_right":"#b91c1c",
-        "do_not_u_turn":    "#b91c1c",
-        "no_overtaking":    "#b91c1c",
-        "no_parking":       "#b91c1c",
-        "no_stop":          "#b91c1c",
-        "no_waiting":       "#b91c1c",
-        # Speed limits
-        "speed_limit_20":   "#4f6ef7",
-        "speed_limit_30":   "#4f6ef7",
-        "speed_limit_40":   "#4f6ef7",
-        "speed_limit_50":   "#4f6ef7",
-        "speed_limit_60":   "#4f6ef7",
-        "speed_limit_70":   "#4f6ef7",
-        "speed_limit_80":   "#4f6ef7",
-        "speed_limit_100":  "#4f6ef7",
-        "speed_limit_120":  "#4f6ef7",
-        # Warnings
-        "warning":          "#f97316",
-        "speed_bump":       "#f97316",
-        "narrow_road":      "#f97316",
-        "railway_crossing": "#f97316",
-        "road_work":        "#f97316",
-        "t_intersection_l": "#f97316",
-        "school_nearby":    "#f97316",
-        "children":         "#f97316",
-        # Info / Direction
-        "crosswalk":        "#06b6d4",
-        "give_way":         "#f5b800",
-        "left_turn":        "#4f6ef7",
-        "right_turn":       "#4f6ef7",
-        "u_turn":           "#4f6ef7",
-        "enter_left_lane":  "#4f6ef7",
-        "left_lane_enter":  "#4f6ef7",
-        "road_main":        "#4f6ef7",
-        # Misc
-        "bicycle":          "#06b6d4",
-        "bus_stop":         "#06b6d4",
-        "parking":          "#06b6d4",
-        "refueling":        "#06b6d4",
-        "truck":            "#f97316",
+    """Return a hex color per class for bounding boxes based on sign category"""
+    # Prohibitory (Red)
+    red_signs = {
+        "stop", "no entry", "all motor vehicle prohibited", "horn prohibited", 
+        "left turn prohibited", "overtaking prohibited", "right turn prohibited", 
+        "straight prohibited", "u turn prohibited", "no stopping or standing",
+        "no parking", "restriction ends"
     }
-    return color_map.get(label, "#d832f5")
+    # Warning (Orange)
+    orange_signs = {
+        "roundabout", "pedestrian crossing", "slippery road", "cross road", 
+        "dangerous dip", "falling rocks", "gap in median", "give way", 
+        "guarded level crossing", "hump or rough road", "left hand curve", 
+        "left reverse bend", "loose gravel", "men at work", "narrow bridge ahead", 
+        "narrow road ahead", "quay side or river bank", "right hand curve", 
+        "right reverse bend", "road widens ahead", "school ahead", "side road left", 
+        "side road right", "staggered intersection", "steep ascent", "steep descent", 
+        "t intersection", "u turn", "unguarded level crossing", "y intersection"
+    }
+    # Mandatory / Info (Blue)
+    blue_signs = {
+        "compulsary ahead", "compulsary keep left", "compulsary keep right", 
+        "compulsary turn left ahead", "compulsary turn right ahead", "pass either side",
+        "speed limit 100", "speed limit 30", "speed limit 50", "petrol pump ahead",
+        "hospital ahead", "axle load limit", "height limit", "width limit"
+    }
 
-print("✅ FastAPI app ready")
+    if label in red_signs:
+        return "#ef4444"
+    elif label in orange_signs:
+        return "#f97316"
+    elif label in blue_signs:
+        return "#4f6ef7"
+    return "#d832f5" # Generic magenta for unknown
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
