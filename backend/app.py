@@ -28,27 +28,51 @@ MODELS_DIR = "models"
 TRAFFIC_MODEL_PATH = os.path.join(MODELS_DIR, "traffic.pt")
 CURRENCY_MODEL_PATH = os.path.join(MODELS_DIR, "currency.pt")
 
+traffic_model = None
+currency_model = None
+
 print("Loading models...")
+
+# Load Traffic Model
 try:
-    # Use best.pt as fallback if specific models aren't found yet
-    traffic_model = YOLO(TRAFFIC_MODEL_PATH if os.path.exists(TRAFFIC_MODEL_PATH) else "best.pt")
-    currency_model = YOLO(CURRENCY_MODEL_PATH if os.path.exists(CURRENCY_MODEL_PATH) else "best.pt")
-    
-    # Warmup both models
-    dummy = np.zeros((640, 640, 3), dtype=np.uint8)
-    traffic_model(dummy, verbose=False)
-    currency_model(dummy, verbose=False)
-    print("✅ Both models loaded and warmed up")
+    if os.path.exists(TRAFFIC_MODEL_PATH):
+        traffic_model = YOLO(TRAFFIC_MODEL_PATH)
+        # Warmup
+        dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+        traffic_model(dummy, verbose=False)
+        print("✅ Traffic model loaded")
+    else:
+        print("⚠️ traffic.pt not found in models/")
 except Exception as e:
-    print(f"⚠️ Error loading models: {e}")
-    traffic_model = None
-    currency_model = None
+    print(f"⚠️ Error loading traffic model: {e}")
+
+# Load Currency Model
+try:
+    if os.path.exists(CURRENCY_MODEL_PATH):
+        currency_model = YOLO(CURRENCY_MODEL_PATH)
+        # Warmup
+        dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+        currency_model(dummy, verbose=False)
+        print("✅ Currency model loaded")
+    else:
+        print("⚠️ currency.pt not found in models/")
+except Exception as e:
+    print(f"⚠️ Error loading currency model: {e}")
+
+if not traffic_model and not currency_model:
+    print("❌ NO MODELS LOADED. Detection will not work.")
 
 # --- REST ENDPOINTS (from update_backend.py) ---
 
 @app.get("/")
 def health():
-    return {"status": "DrishtiAI backend running ✅", "models": ["traffic", "currency"]}
+    return {
+        "status": "DrishtiAI backend running ✅", 
+        "models_loaded": {
+            "traffic": traffic_model is not None,
+            "currency": currency_model is not None
+        }
+    }
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...), model: str = "traffic"):
