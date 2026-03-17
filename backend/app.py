@@ -91,7 +91,7 @@ async def detect(file: UploadFile = File(...), model: str = "traffic"):
         detections = []
         for box in results.boxes:
             detections.append({
-                "label": mdl.names[int(box.cls)],
+                "label": mdl.names[int(box.cls)].replace("_", " "),
                 "confidence": round(float(box.conf), 3),
                 "bbox": [round(float(x), 1) for x in box.xyxy[0].tolist()],
                 "model": model
@@ -124,7 +124,7 @@ async def detect_both(file: UploadFile = File(...)):
             results = mdl(img_array, conf=0.45, verbose=False, imgsz=640)[0]
             for box in results.boxes:
                 all_detections.append({
-                    "label": mdl.names[int(box.cls)],
+                    "label": mdl.names[int(box.cls)].replace("_", " "),
                     "confidence": round(float(box.conf), 3),
                     "bbox": [round(float(x), 1) for x in box.xyxy[0].tolist()],
                     "model": model_name
@@ -173,7 +173,7 @@ async def websocket_endpoint(ws: WebSocket):
                 results = mdl(frame, conf=0.55, iou=0.4, imgsz=640, verbose=False)[0]
                 
                 for box in results.boxes:
-                    label = mdl.names[int(box.cls)]
+                    label = mdl.names[int(box.cls)].replace("_", " ")
                     all_detections.append({
                         "label": label,
                         "conf": round(float(box.conf), 3),

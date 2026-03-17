@@ -2019,11 +2019,16 @@
       };
 
       ws.onmessage = (e) => {
-        isRequestFlying = false; // Response received, clear flag
+        isRequestFlying = false;
         try {
           const data = JSON.parse(e.data);
-          if (data.detections) handleDetections(data.detections);
-          // Prototype Mode: Interval is handled by startFrameSending()
+          if (data.detections) {
+            // Normalize: model uses underscores, UI uses spaces
+            data.detections.forEach(d => {
+              if (d.label) d.label = d.label.replace(/_/g, ' ');
+            });
+            handleDetections(data.detections);
+          }
         } catch (err) { console.warn('Bad WS message:', err); }
       };
 
